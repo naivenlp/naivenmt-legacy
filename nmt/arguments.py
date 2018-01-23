@@ -1,18 +1,3 @@
-# Copyright 2018 luozhouyang. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-
 import argparse
 
 import tensorflow as tf
@@ -30,6 +15,7 @@ class Arguments(object):
         if self.parser is None:
             self.parser = argparse.ArgumentParser()
         self._add_arguments()
+        self.hparams = self._create_hparams()
 
     def _parse_known_args(self):
         return self.parser.parse_known_args()
@@ -286,7 +272,7 @@ class Arguments(object):
 
         self.flags, self.unparsed = self._parse_known_args()
 
-    def get_hparams(self):
+    def _create_hparams(self):
         flags = self.flags
         return tf.contrib.training.HParams(
             # Data
@@ -368,11 +354,193 @@ class Arguments(object):
             num_inter_threads=flags.num_inter_threads,
         )
 
+    def get_hparams(self):
+        if self.hparams is None:
+            self.hparams = self._create_hparams()
+        return self.hparams
+
     def get_unparsed(self):
         return self.unparsed
 
     def get_flags(self):
         return self.flags
+
+    def src(self):
+        return self.hparams.src
+
+    def tgt(self):
+        return self.hparams.tgt
+
+    def train_prefix(self):
+        return self.hparams.train_prefix
+
+    def dev_prefix(self):
+        return self.hparams.dev_prefix
+
+    def test_prefix(self):
+        return self.hparams.test_prefix
+
+    def vocab_prefix(self):
+        return self.hparams.vocab_prefix
+
+    def embed_prefix(self):
+        return self.hparams.embed_prefix
+
+    def num_units(self):
+        return self.hparams.num_units
+
+    def num_layers(self):
+        return self.hparams.num_units
+
+    def num_encoder_layers(self):
+        return self.hparams.num_encoder_layers
+
+    def num_decoder_layers(self):
+        return self.hparams.num_decoder_layers
+
+    def unit_type(self):
+        return self.hparams.unit_type
+
+    def encoder_type(self):
+        return self.hparams.encoder_type
+
+    def residual(self):
+        return self.hparams.residual
+
+    def time_major(self):
+        return self.hparams.time_major
+
+    def num_embedding_partitions(self):
+        return self.hparams.num_embedding_partitions
+
+    def attention(self):
+        return self.hparams.attention
+
+    def attention_architecture(self):
+        return self.hparams.attention_architecture
+
+    def output_attention(self):
+        return self.hparams.output_attention
+
+    def pass_hidden_state(self):
+        return self.hparams.pass_hidden_state
+
+    def optimizer(self):
+        return self.hparams.optimizer
+
+    def num_train_steps(self):
+        return self.hparams.num_train_steps
+
+    def batch_size(self):
+        return self.hparams.batch_size
+
+    def init_op(self):
+        return self.hparams.init_op
+
+    def init_weight(self):
+        return self.hparams.init_weight
+
+    def max_gradient_norm(self):
+        return self.hparams.max_gradient_norm
+
+    def learning_rate(self):
+        return self.hparams.learning_rate
+
+    def warmup_steps(self):
+        return self.hparams.warmup_steps()
+
+    def warmup_scheme(self):
+        return self.hparams.warmup_shceme
+
+    def decay_scheme(self):
+        return self.hparams.decay_scheme
+
+    def colocate_gradients_with_ops(self):
+        return self.hparams.colocate_gradients_with_ops
+
+    def num_buckets(self):
+        return self.hparams.buckets
+
+    def max_train(self):
+        return self.hparams.max_train
+
+    def src_max_len(self):
+        return self.hparams.src_max_len
+
+    def tgt_max_len(self):
+        return self.hparams.tgt_max_len
+
+    def src_max_len_infer(self):
+        return self.hparams.src_max_len_infer
+
+    def tgt_max_len_infer(self):
+        return self.hparams.tgt_max_len_infer
+
+    def beam_width(self):
+        return self.hparams.beam_width
+
+    def length_penalty_weight(self):
+        return self.hparams.length_penalty_weight
+
+    def sampling_temperature(self):
+        return self.hparams.sampling_temperature
+
+    def num_translations_per_input(self):
+        return self.hparams.num_translations_per_input
+
+    def sos(self):
+        return self.hparams.sos
+
+    def eod(self):
+        return self.hparams.eos
+
+    def subword_option(self):
+        return self.hparams.subword_option
+
+    def check_special_token(self):
+        return self.hparams.check_special_token
+
+    def forget_bias(self):
+        return self.hparams.forget_bias
+
+    def num_gpus(self):
+        return self.hparams.num_gpus
+
+    def epoch_step(self):
+        return self.hparams.epoch_step
+
+    def steps_per_stats(self):
+        return self.hparams.steps_per_stats
+
+    def steps_per_external_eval(self):
+        return self.hparams.steps_per_external_eval
+
+    def share_vocab(self):
+        return self.hparams.share_vocab
+
+    def metrics(self):
+        return self.hparams.metrics
+
+    def log_device_placement(self):
+        return self.hparams.log_device_placement
+
+    def random_seed(self):
+        return self.hparams.random_seed
+
+    def override_loaded_hparams(self):
+        return self.hparams.override_loaded_hparams
+
+    def num_keep_ckpts(self):
+        return self.hparams.num_keep_ckpts
+
+    def avg_ckpts(self):
+        return self.hparams.avg_ckpts
+
+    def num_intra_threads(self):
+        return self.hparams.num_intra_threads
+
+    def num_inter_threads(self):
+        return self.hparams.num_inter_threads
 
 
 arguments = Arguments()

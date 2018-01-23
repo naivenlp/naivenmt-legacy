@@ -4,26 +4,24 @@ from .arguments import arguments
 
 
 class ArgumentsTest(unittest.TestCase):
-    def setUp(self):
-        self.flags = arguments.get_flags()
-        self.unparsed = arguments.get_unparsed()
-        self.hparams = arguments.get_hparams()
+    def testGetHparams(self):
+        hparams = arguments.get_hparams()
+        self.assertEqual(hparams.src, None)
+        self.assertEqual(hparams.num_units, 32)
 
-    def tearDown(self):
-        self.flags = None
-        self.unparsed = None
-        self.hparams = None
+    def testGetFlags(self):
+        flags = arguments.get_hparams()
+        self.assertEqual(flags.src, None)
+        self.assertEqual(flags.num_units, 32)
 
-    def testHparams(self):
-        self.assertEqual(self.hparams.src, None)
-        self.assertEqual(self.hparams.num_units, 32)
+    def testGetUnparsed(self):
+        unparsed = arguments.get_unparsed()
+        self.assertIsNotNone(unparsed)
 
-    def testFlags(self):
-        self.assertEqual(self.hparams.src, None)
-        self.assertEqual(self.hparams.num_units, 32)
-
-    def testUnparsed(self):
-        self.assertIsNotNone(self.unparsed)
+    def testCreateHparams(self):
+        hparams = arguments._create_hparams()
+        self.assertEqual(hparams.src, None)
+        self.assertEqual(hparams.num_units, 32)
 
 
 if __name__ == '__main__':
