@@ -2,20 +2,23 @@ import sys
 
 import tensorflow as tf
 
+from . import infer
+from . import train
 from .arguments import arguments
 
 flags = None
 default_hparams = None
 
 
-def run_main(flags, hparams):
-    print(flags)
-    print(hparams)
-    # TODO(luozhouyang) run main logic
+def run_main():
+    if flags.inference_input_file is not None:
+        infer.infer(default_hparams)
+    else:
+        train.train(default_hparams)
 
 
-def main(unused_argv):
-    run_main(flags, default_hparams)
+def main(_):
+    run_main()
 
 
 if __name__ == "__main__":
