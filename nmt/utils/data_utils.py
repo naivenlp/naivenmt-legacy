@@ -1,3 +1,7 @@
+from nmt.dataset import InferDataset
+import tensorflow as tf
+
+
 def create_train_data(hparams):
     pass
 
@@ -10,8 +14,15 @@ def create_test_data(hparams):
     pass
 
 
-def create_infer_data(hparams):
-    pass
+def create_infer_data(hparams, dataset, src_vocab_table):
+    infer_dataset = InferDataset(
+        src_dataset=dataset,
+        src_vocab_table=src_vocab_table,
+        batch_size=hparams.batch_size,
+        eos=hparams.eos,
+        src_max_len=hparams.src_max_len_infer
+    )
+    return infer_dataset
 
 
 def merge_files(input_files, output_file, input_files_encoding='UTF-8'):
