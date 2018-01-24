@@ -10,15 +10,11 @@ flags = None
 default_hparams = None
 
 
-def run_main():
+def main(_):
     if flags.inference_input_file is not None:
         infer.infer(default_hparams)
     else:
         train.train(default_hparams)
-
-
-def main(_):
-    run_main()
 
 
 if __name__ == "__main__":
