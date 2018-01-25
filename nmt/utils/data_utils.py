@@ -1,9 +1,31 @@
-from nmt.dataset import InferDataset
-import tensorflow as tf
+from nmt.dataset import InferDataset, TrainDataset
 
 
-def create_train_data(hparams):
-    pass
+def create_train_data(hparams,
+                      src_dataset,
+                      tgt_dataset,
+                      src_vocab_table,
+                      tgt_vocab_table):
+    train_dataset = TrainDataset(
+        src_dataset=src_dataset,
+        tgt_dataset=tgt_dataset,
+        src_vocab_table=src_vocab_table,
+        tgt_vocab_table=tgt_vocab_table,
+        batch_size=hparams.batch_size,
+        sos=hparams.sos,
+        eos=hparams.eos,
+        source_reverse=hparams.source_reverse,
+        random_seed=hparams.random_seed,
+        num_buckets=hparams.num_buckets,
+        src_max_len=hparams.src_max_len,
+        tgt_max_len=hparams.tgt_max_len,
+        num_parallel_calls=hparams.num_parallel_calls,
+        output_buffer_size=hparams.output_buffer_size,
+        skip_count=hparams.skip_count,
+        num_shards=hparams.num_shards,
+        shard_index=hparams.shard_index
+    )
+    return train_dataset
 
 
 def create_dev_data(hparams):
