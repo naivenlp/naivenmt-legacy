@@ -1,9 +1,4 @@
-import recurrentshop
 from recurrentshop.cells import *
-from keras.models import Model
-from keras.layers import Input, Dense, Lambda, Activation
-from keras.layers import add, multiply, concatenate
-from keras import backend as K
 
 
 class LSTMDecoderCell(ExtendedRNNCell):
@@ -29,10 +24,10 @@ class LSTMDecoderCell(ExtendedRNNCell):
                    use_bias=False)
         W2 = Dense(output_dim,
                    kernel_initializer=self.kernel_initializer,
-                   kernel_regularizer=self.kernel_regularizer,)
+                   kernel_regularizer=self.kernel_regularizer, )
         U = Dense(hidden_dim * 4,
                   kernel_initializer=self.kernel_initializer,
-                  kernel_regularizer=self.kernel_regularizer,)
+                  kernel_regularizer=self.kernel_regularizer, )
 
         z = add([W1(x), U(h_tm1)])
 
@@ -57,9 +52,8 @@ class AttentionDecoderCell(ExtendedRNNCell):
         self.input_ndim = 3
         super(AttentionDecoderCell, self).__init__(**kwargs)
 
-
     def build_model(self, input_shape):
-        
+
         input_dim = input_shape[-1]
         output_dim = self.output_dim
         input_length = input_shape[1]
@@ -68,7 +62,7 @@ class AttentionDecoderCell(ExtendedRNNCell):
         x = Input(batch_shape=input_shape)
         h_tm1 = Input(batch_shape=(input_shape[0], hidden_dim))
         c_tm1 = Input(batch_shape=(input_shape[0], hidden_dim))
-        
+
         W1 = Dense(hidden_dim * 4,
                    kernel_initializer=self.kernel_initializer,
                    kernel_regularizer=self.kernel_regularizer)
