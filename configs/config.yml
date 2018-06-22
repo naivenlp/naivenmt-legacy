@@ -1,0 +1,6 @@
+data:
+
+model:
+
+train:
+  batch_size: 32
