@@ -13,13 +13,13 @@ class StandardModel(object):
 
     def build_model(self, mode):
         src_vocab_file = self.config.configs['data']['src_vocab']
+        src_vocab = vocab_utils.parse_vocab(src_vocab_file)
         share_vocab = self.config.configs['train']['share_vocab']
         if share_vocab:
-            tgt_vocab_file = src_vocab_file
+            tgt_vocab = src_vocab
         else:
             tgt_vocab_file = self.config.configs['data']['tgt_vocab']
-        src_vocab = vocab_utils.parse_vocab(src_vocab_file)
-        tgt_vocab = vocab_utils.parse_vocab(tgt_vocab_file)
+            tgt_vocab = vocab_utils.parse_vocab(tgt_vocab_file)
         src_vocab_len = len(src_vocab)
         tgt_vocab_len = len(tgt_vocab)
         max_src_len = self.config.configs['train']['max_src_len']
