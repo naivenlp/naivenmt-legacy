@@ -11,12 +11,10 @@ class BaseModel(abc.ABC):
                name,
                features_inputter,
                labels_inputter,
-               estimator,
                dtype=None):
     self.name = name
     self.features_inputter = features_inputter
     self.labels_inputter = labels_inputter
-    self.estimator = estimator
     self.dtype = dtype if dtype else self.features_inputter.dtype
 
   def __call__(self, features, labels, params, mode, config):
@@ -92,7 +90,7 @@ class BaseModel(abc.ABC):
     return self.features_inputter.get_serving_input_receiver()
 
   @abc.abstractmethod
-  def _build(self, features, lables, params, mode, config):
+  def _build(self, features, labels, params, mode, config):
     raise NotImplementedError()
 
   @abc.abstractmethod
