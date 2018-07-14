@@ -1,6 +1,51 @@
 data:
+  train_features_file:
+  train_labels_file:
+  eval_features_file:
+  eval_labels_file:
+  features_vocab_file:
+  labels_vocab_file:
+  max_features_len:
+  max_labels_len:
+  out_dir:
 
-model:
+params:
+  optimizer:
+  learning_rate:
+  param_init:
+  clip_gradients:
+  regularization:
+  average_loss_in_time:
+  decay_type:
+  decay_rate:
+  decay_steps:
+  start_decay_steps:
+  min_learning_rate:
+  beam_width:
+  replace_unknown_target:
 
 train:
-  batch_size: 32
+  batch_size:
+  save_checkpoints_steps:
+  keep_max_checkpoints:
+  save_summary_steps:
+  training_steps:
+  bucket_width:
+  shuffle_buffer_size:
+  pefetch_buffer_size:
+  average_last_checkpoints:
+
+eval:
+  batch_size:
+  prefetch_buffer_size:
+  eval_delay:
+  save_predictions:
+  external_evaluators:
+  exporters:
+
+infer:
+  batch_size:
+  prefetch_buffer_size:
+  n_best:
+
+infer:
