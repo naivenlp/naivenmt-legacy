@@ -1,50 +1,49 @@
 data:
-  train_features_file:
-  train_labels_file:
-  eval_features_file:
-  eval_labels_file:
-  features_vocab_file:
-  labels_vocab_file:
-  max_features_len:
-  max_labels_len:
-  out_dir:
+  train_features_file: data/train_features.txt
+  train_labels_file: data/train_labels.txt
+  eval_features_file: data/eval_features.txt
+  eval_labels_file: data/eval_labels.txt
+  features_vocab_file: data/features_vocab.txt
+  labels_vocab_file: data/labels_vocab.txt
+  max_features_len: 30
+  max_labels_len: 30
+  out_dir: /tmp/model
 
 params:
-  optimizer:
-  learning_rate:
-  param_init:
-  clip_gradients:
+  optimizer: AdamOptimizer
+  learning_rate: 1.0
+  param_init: 0.1
+  clip_gradients: 5.0
   regularization:
-  average_loss_in_time:
-  decay_type:
-  decay_rate:
-  decay_steps:
-  start_decay_steps:
-  min_learning_rate:
-  beam_width:
-  replace_unknown_target:
+  average_loss_in_time: false
+  decay_type: exponential_decay
+  decay_rate: 0.7
+  decay_steps: 10000
+  start_decay_steps: 100000
+  min_learning_rate: 0.0001
+  beam_width: 5
+  replace_unknown_target: false
 
 train:
-  batch_size:
-  save_checkpoints_steps:
-  keep_max_checkpoints:
-  save_summary_steps:
-  training_steps:
-  bucket_width:
-  shuffle_buffer_size:
-  pefetch_buffer_size:
-  average_last_checkpoints:
+  batch_size: 64
+  save_checkpoints_steps: 5000
+  keep_max_checkpoints: 5
+  save_summary_steps: 100
+  training_steps: 200000
+  bucket_width: 5
+  shuffle_buffer_size: 500000
+  pefetch_buffer_size: 1
+  average_last_checkpoints: 5
 
 eval:
-  batch_size:
-  prefetch_buffer_size:
-  eval_delay:
-  save_predictions:
-  external_evaluators:
-  exporters:
+  batch_size: 32
+  prefetch_buffer_size: 1
+  eval_delay: 18000
+  save_predictions: true
+  external_evaluators: BLEU
+  exporters: last
 
 infer:
-  batch_size:
-  prefetch_buffer_size:
-  n_best:
-
+  batch_size: 32
+  prefetch_buffer_size: 1
+  n_best: 1
