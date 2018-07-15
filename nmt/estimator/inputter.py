@@ -16,6 +16,14 @@ class Inputter(abc.ABC):
   def get_serving_input_receiver(self):
     raise NotImplementedError()
 
+  @abc.abstractmethod
+  def build_inputs(self, inputs, mode, out_dir):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def vocab_size(self):
+    raise NotImplementedError()
+
 
 class TextFileInputter(Inputter):
 
@@ -28,6 +36,12 @@ class TextFileInputter(Inputter):
 
   def get_serving_input_receiver(self):
     return None
+
+  def build_inputs(self, inputs, mode, out_dir):
+    pass
+
+  def vocab_size(self):
+    pass
 
 
 class WordEmbedder(TextFileInputter):
