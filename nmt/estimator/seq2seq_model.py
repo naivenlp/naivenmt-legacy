@@ -1,6 +1,8 @@
 import tensorflow as tf
 
 from .base_model import BaseModel
+from nmt import loss_utils
+from nmt import optimize_utils
 
 
 class Seq2SeqModel(BaseModel):
@@ -89,16 +91,26 @@ class Seq2SeqModel(BaseModel):
     return logits, prediction
 
   def _initializer(self, params):
-    pass
+    init_value = params.init_value
+    if init_value:
+      return tf.random_uniform_initializer(
+        -init_value, init_value, dtype=self.dtype)
+    return None
 
   def _optimize(self, loss, params):
-    pass
+    return optimize_utils.optimize(loss, params)
 
   def _compute_metrics(self, features, labels, predictions):
     pass
 
   def _compute_loss(self, features, labels, outputs, params, mode):
-    pass
+    return loss_utils.cross_entropy_sequence_loss(
+      logits=outputs,
+      labels=labels["ids_out"],
+      sequence_length=self.labels_inputter.get_length(labels),
+      smoothing=params.smoothing,
+      average_in_time=params.averaget_in_time,
+      mode=mode)
 
   def _replace_unknown_target(self, source_tokens, target_tokens):
     raise NotImplementedError()
