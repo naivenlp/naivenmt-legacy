@@ -77,7 +77,7 @@ class Seq2SeqModel(BaseModel):
           source_tokens = tf.contrib.seq2seq.tile_batch(source_tokens,
                                                         multiplier=beam_width)
         target_tokens = self._replace_unknown_target(source_tokens,
-                                                     target_tokens)
+                                                     target_tokens, alignment)
       prediction = {
         "tokens": target_tokens,
         "length": sampled_len,
@@ -101,7 +101,7 @@ class Seq2SeqModel(BaseModel):
     return optimize_utils.optimize(loss, params)
 
   def _compute_metrics(self, features, labels, predictions):
-    pass
+    return None
 
   def _compute_loss(self, features, labels, outputs, params, mode):
     return loss_utils.cross_entropy_sequence_loss(
@@ -112,5 +112,34 @@ class Seq2SeqModel(BaseModel):
       average_in_time=params.averaget_in_time,
       mode=mode)
 
-  def _replace_unknown_target(self, source_tokens, target_tokens):
-    raise NotImplementedError()
+  def _replace_unknown_target(self,
+                              source_tokens,
+                              target_tokens,
+                              alignment):
+    original_shape = tf.shape(target_tokens)
+    target_tokens = tf.reshape(target_tokens, [-1, original_shape[-1]])
+    attention = tf.reshape(alignment, [-1, tf.shape(alignment)[2]])
+    replaced_target_tokens = self._replace_unknown_target_tokens(
+      target_tokens,
+      source_tokens,
+      attention)
+    target_tokens = tf.reshape(replaced_target_tokens, original_shape)
+    return target_tokens
+
+  @staticmethod
+  def _replace_unknown_target_tokens(target_tokens,
+                                     source_tokens,
+                                     attention):
+    alignment = tf.argmax(attention, axis=-1, output_type=tf.int32)
+    batch_size = tf.shape(source_tokens)[0]
+    max_time = tf.shape(source_tokens)[1]
+    batch_ids = tf.range(batch_size)
+    batch_ids = tf.tile(batch_ids, [max_time])
+    batch_ids = tf.reshape(batch_ids, [max_time, batch_size])
+    batch_ids = tf.transpose(batch_ids, perm=[1, 0])
+    aligned_pos = tf.stack([batch_ids, alignment], axis=-1)
+    aligned_tokens = tf.gather_nd(source_tokens, aligned_pos)
+    return tf.where(
+      tf.equal(target_tokens, "<unk>"),
+      x=aligned_tokens,
+      y=target_tokens)
