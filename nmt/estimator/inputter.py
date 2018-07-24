@@ -5,19 +5,24 @@ import tensorflow as tf
 
 class Inputter(abc.ABC):
 
-  def __init__(self, dtype=None):
+  def __init__(self, config, dtype):
+    self.config = config
     self.dtype = dtype
 
   @abc.abstractmethod
-  def build_dataset(self):
+  def dataset(self):
     raise NotImplementedError()
 
   @abc.abstractmethod
-  def get_serving_input_receiver(self):
+  def vocab_file(self):
     raise NotImplementedError()
 
   @abc.abstractmethod
-  def build_inputs(self, inputs, mode, out_dir):
+  def vocab(self):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def vocab_reverse(self):
     raise NotImplementedError()
 
   @abc.abstractmethod
@@ -25,26 +30,78 @@ class Inputter(abc.ABC):
     raise NotImplementedError()
 
 
-class TextFileInputter(Inputter):
+class FeaturesInputterInterface(Inputter):
 
-  def __init__(self, file, dtype=None):
-    super().__init__(dtype)
-    self.file = file
+  def __init__(self, features_file, config, dtype):
+    super().__init__(config=config, dtype=dtype)
+    self.features_file = features_file
 
-  def build_dataset(self):
-    return tf.data.TextLineDataset(self.file)
+  @abc.abstractmethod
+  def features_length(self):
+    raise NotImplementedError()
 
-  def get_serving_input_receiver(self):
-    return None
+  @abc.abstractmethod
+  def serving_input_receiver_fn(self):
+    raise NotImplementedError()
 
-  def build_inputs(self, inputs, mode, out_dir):
+
+class LabelsInputterInterface(Inputter):
+
+  def __init__(self, labels_file, config, dtype):
+    super().__init__(config=config, dtype=dtype)
+    self.labels_file = labels_file
+
+  @abc.abstractmethod
+  def labels_length(self):
+    raise NotImplementedError()
+
+
+class FeaturesInputter(FeaturesInputterInterface):
+
+  def __init__(self, features_file, config, dtype):
+    super().__init__(features_file=features_file, config=config, dtype=dtype)
+
+  def serving_input_receiver_fn(self):
+    pass
+
+  def dataset(self):
+    pass
+
+  def vocab_file(self):
+    pass
+
+  def vocab(self):
+    pass
+
+  def vocab_reverse(self):
     pass
 
   def vocab_size(self):
     pass
 
+  def features_length(self):
+    pass
 
-class WordEmbedder(TextFileInputter):
 
-  def build_dataset(self):
+class LabelsInputter(LabelsInputterInterface):
+
+  def __init__(self, labels_file, config, dtype):
+    super().__init__(labels_file=labels_file, config=config, dtype=dtype)
+
+  def dataset(self):
+    pass
+
+  def vocab_file(self):
+    pass
+
+  def vocab(self):
+    pass
+
+  def vocab_reverse(self):
+    pass
+
+  def vocab_size(self):
+    pass
+
+  def labels_length(self):
     pass
