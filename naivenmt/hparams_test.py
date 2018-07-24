@@ -5,7 +5,7 @@ from .hparams import Hparams
 class TestHParams(unittest.TestCase):
 
   def test_hparams(self):
-    hparams = Hparams("configs/hparams.yml").build()
+    hparams = Hparams("naivenmt/hparams.yml").build()
     self.assertEqual("/tmp/model", hparams.out_dir)
     self.assertEqual(None, hparams.random_seed)
     self.assertEqual(None, hparams.decay_scheme)
