@@ -1,5 +1,6 @@
-import tensorflow as tf
 import abc
+
+import tensorflow as tf
 
 
 class AbstractModel(abc.ABC):
@@ -53,7 +54,11 @@ class SequenceToSequence(AbstractModel):
 
   def model_fn(self):
     def _model_fn(features, labels, params, mode, config):
-      logits, loss, _, _ = self._build(features, labels, params, mode, config)
+      logits, loss, _, sample_id = self._build(
+        features, labels, params, mode, config)
+      predictions = None
+      if mode != tf.estimator.ModeKeys.TRAIN:
+        predictions = self._decode_predictions(sample_id, params.time_major)
       if mode == tf.estimator.ModeKeys.TRAIN:
         train_op = self._train_op(loss, params)
         return tf.estimator.EstimatorSpec(
@@ -61,14 +66,12 @@ class SequenceToSequence(AbstractModel):
           loss=loss,
           train_op=train_op)
       elif mode == tf.estimator.ModeKeys.EVAL:
-        eval_metric_ops = self._eval_metric_ops(
-          features, labels, self._decode_predictions(logits))
+        eval_metric_ops = self._eval_metric_ops(features, labels, predictions)
         return tf.estimator.EstimatorSpec(
           mode=mode,
           loss=loss,
           eval_metric_ops=eval_metric_ops)
       elif mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = self._decode_predictions(logits)
         export_outputs = {}
         k = tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
         export_outputs[k] = tf.estimator.export.PredictOutput(predictions)
@@ -207,7 +210,13 @@ class SequenceToSequence(AbstractModel):
     return clipped_gradients, gradient_norm_summary, gradient_norm
 
   def _eval_metric_ops(self, features, labels, predictions):
-    raise NotImplementedError()
+    return None
 
-  def _decode_predictions(self, logits):
-    raise NotImplementedError()
+  def _decode_predictions(self, sample_id, time_major):
+    sample_words = self.inputter.reverse_target_vocab_table.lookup(
+      tf.to_int64(sample_id))
+    if time_major:
+      sample_words = sample_words.transpose()
+    elif sample_words.ndim == 3:
+      sample_words = sample_words.transpose([2, 0, 1])
+    return sample_words
