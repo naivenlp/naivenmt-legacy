@@ -29,6 +29,27 @@ class Inputter(abc.ABC):
   def iterator(self, mode, params):
     raise NotImplementedError()
 
+  @property
   @abc.abstractmethod
   def serving_input_receiver(self):
+    raise NotImplementedError()
+
+  @property
+  @abc.abstractmethod
+  def reverse_target_vocab_table(self):
+    raise NotImplementedError()
+
+  @property
+  @abc.abstractmethod
+  def reverse_source_vocab_table(self):
+    raise NotImplementedError()
+
+  @property
+  @abc.abstractmethod
+  def source_vocab_table(self):
+    raise NotImplementedError()
+
+  @property
+  @abc.abstractmethod
+  def target_vocab_table(self):
     raise NotImplementedError()
