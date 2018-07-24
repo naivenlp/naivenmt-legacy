@@ -1,7 +1,7 @@
 import abc
 import argparse
 from configs.config import Config
-from configs.hparams import Hparams
+from naivenmt.hparams import Hparams
 
 
 class NaiveNMTInterface(abc.ABC):
