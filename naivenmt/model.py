@@ -101,14 +101,16 @@ class SequenceToSequence(AbstractModel):
     return self.encoder.encode(embedding_input, sequence_length, params)
 
   def _decode(self, mode, encoder_outputs, encoder_state, labels, params):
-    embedding_input = self.inputter.embedding_input(labels)
-    sequence_length = self.inputter.target_sequence_length()
+    # embedding_input = self.inputter.embedding_input(labels)
+    src_seq_len = self.inputter.source_sequence_length()
+    tgt_seq_len = self.inputter.target_sequence_length()
     return self.decoder.decode(
       mode,
       encoder_outputs,
       encoder_state,
-      embedding_input,
-      sequence_length,
+      labels,
+      src_seq_len,
+      tgt_seq_len,
       params)
 
   def _compute_loss(self, logits, params):
