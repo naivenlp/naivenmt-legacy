@@ -16,6 +16,14 @@ class AbstractEmbedding(abc.ABC):
   def decoder_embedding(self):
     raise NotImplementedError()
 
+  @abc.abstractmethod
+  def encoder_embedding_input(self, inputs):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def decoder_embedding_input(self, inputs):
+    raise NotImplementedError()
+
 
 class Embedding(AbstractEmbedding):
 
@@ -176,3 +184,9 @@ class Embedding(AbstractEmbedding):
   @property
   def decoder_embedding(self):
     return self._decoder_embedding
+
+  def encoder_embedding_input(self, inputs):
+    return tf.nn.embedding_lookup(self.encoder_embedding, inputs)
+
+  def decoder_embedding_input(self, inputs):
+    return tf.nn.embedding_lookup(self.decoder_embedding, inputs)
