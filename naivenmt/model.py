@@ -2,6 +2,8 @@ import abc
 
 import tensorflow as tf
 
+from . import utils
+
 
 class AbstractModel(abc.ABC):
 
@@ -45,8 +47,8 @@ class SequenceToSequence(AbstractModel):
       logits, sample_id, final_context_state = self._decode(
         mode, encoder_outputs, encoder_state, labels, params)
       if mode != tf.estimator.ModeKeys.PREDICT:
-        with tf.device(self._get_device(params.num_encoder_layers - 1,
-                                        params.num_gpus)):
+        with tf.device(utils.get_device_str(params.num_encoder_layers - 1,
+                                            params.num_gpus)):
           loss = self._compute_loss(logits, params)
       else:
         loss = None
@@ -129,13 +131,6 @@ class SequenceToSequence(AbstractModel):
     loss = tf.reduce_sum(crossent * target_weights) / tf.to_float(
       params.batch_size)
     return loss
-
-  @staticmethod
-  def _get_device(device_id, num_gpus):
-    if num_gpus == 0:
-      return "/cpu:0"
-    device_str = "/gpu:%d" % (device_id % num_gpus)
-    return device_str
 
   def _train_op(self, loss, params):
     global_steps = tf.Variable(0, trainable=False)
