@@ -33,7 +33,7 @@ class BasicDecoder(AbstractDecoder):
       single_cell_fn = self._single_cell
 
     cell_list = []
-    for i in range(params.num_layers):
+    for i in range(params.num_decoder_layers):
       residual_conn = (i >= params.num_layers - params.num_resisual_layers)
       single_cell = single_cell_fn(
         unit_type=params.unit_type,
