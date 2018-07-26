@@ -27,7 +27,8 @@ class BasicDecoder(AbstractDecoder):
 
     cell_list = self._cell_list(
       params.unit_type, params.num_units, params.num_decoder_layers,
-      params.num_residual_layers, params.forget_bias, params.dropout,
+      # TODO(luozhouyang) add `num_decoder_residual_layers` in hparams
+      params.num_decoder_residual_layers, params.forget_bias, params.dropout,
       mode=mode,
       num_gpus=params.num_gpus,
       single_cell_fn=self._single_cell_fn,
