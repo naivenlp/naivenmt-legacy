@@ -97,11 +97,11 @@ class SequenceToSequence(AbstractModel):
   def _serving_input_fn(self):
     return self.inputter.serving_input_receiver()
 
-  def _encode(self, features, params, configs):
-    embedding_input = self.inputter.embedding_input(features)
+  def _encode(self, mode, features, params, configs):
+    # embedding_input = self.inputter.embedding_input(features)
     sequence_length = self.inputter.source_sequence_length()
     return self.encoder.encode(
-      embedding_input, sequence_length, params, configs)
+      mode, features, sequence_length, params, configs)
 
   def _decode(self,
               mode, encoder_outputs, encoder_state, labels, params, configs):
