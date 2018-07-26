@@ -14,10 +14,12 @@ class DecoderInterface(abc.ABC):
 
 class AbstractDecoder(DecoderInterface):
 
-  def __init__(self, embedding, scope="decoder", extra_args=None):
+  def __init__(self, embedding, scope="decoder"):
     self.embedding = embedding
     self.scope = scope
-    self.extra_args = extra_args
+    self._single_cell_fn = self._create_single_cell_fn()
+    self._residual_fn = self._create_residual_fn()
+    self._attention_mechanism_fn = self._create_attention_mechanism_fn()
 
   def decode(self, mode, encoder_outputs, encoder_state,
              labels, src_seq_len, tgt_seq_len, params):
@@ -99,6 +101,7 @@ class AbstractDecoder(DecoderInterface):
 
     return logits, sample_id, final_context_state
 
+  @abc.abstractmethod
   def _build_decoder_cell(self,
                           mode,
                           params,
@@ -117,3 +120,12 @@ class AbstractDecoder(DecoderInterface):
       max_iterations = tf.to_int32(tf.round(
         tf.to_float(max_encoder_length) * decoding_length_factor))
     return max_iterations
+
+  def _create_single_cell_fn(self):
+    return None
+
+  def _create_residual_fn(self):
+    return None
+
+  def _create_attention_mechanism_fn(self):
+    return None

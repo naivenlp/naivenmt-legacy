@@ -15,11 +15,6 @@ class AttentionDecoder(BasicDecoder):
                           sequence_length):
     attention_option = params.attention
     attention_architecture = params.attention_architecture
-    if self.extra_args and self.extra_args.attention_mechaism_fn:
-      attention_mechanism_fn = self.extra_args.attention_mechaism_fn
-    else:
-      attention_mechanism_fn = self._create_attention_mechanism
-
     assert attention_architecture == "standard"
 
     if params.time_major:
@@ -38,7 +33,7 @@ class AttentionDecoder(BasicDecoder):
     else:
       batch_size = tf.size(sequence_length)
 
-    attention_mechanism = attention_mechanism_fn(
+    attention_mechanism = self._attention_mechanism_fn(
       attention_option, params.num_units, memory, sequence_length, mode)
 
     cell = self._create_rnn_cell(mode, params)
@@ -64,24 +59,27 @@ class AttentionDecoder(BasicDecoder):
 
     return cell, decoder_initial_state
 
-  def _create_attention_mechanism(self, option, num_units,
-                                  memory, sequence_length, mode):
-    if option == "luong":
-      mechanism = tf.contrib.seq2seq.LuongAttention(
-        num_units, memory, memory_sequence_length=sequence_length)
-    elif option == "scaled_luong":
-      mechanism = tf.contrib.seq2seq.LuongAttention(
-        num_units, memory, memory_sequence_length=sequence_length, scale=True)
-    elif option == "bahdanau":
-      mechanism = tf.contrib.seq2seq.BahdanauAttention(
-        num_units, memory, memory_sequence_length=sequence_length)
-    elif option == "normed_bahdanau":
-      mechanism = tf.contrib.seq2seq.BahdanauAttention(
-        num_units,
-        memory,
-        memory_sequence_length=sequence_length,
-        normalize=True)
-    else:
-      raise ValueError("Invalid attention option: %s" % option)
+  def _create_attention_mechanism_fn(self):
+    def _create_attention_mechanism_fn(option, num_units,
+                                       memory, sequence_length):
+      if option == "luong":
+        mechanism = tf.contrib.seq2seq.LuongAttention(
+          num_units, memory, memory_sequence_length=sequence_length)
+      elif option == "scaled_luong":
+        mechanism = tf.contrib.seq2seq.LuongAttention(
+          num_units, memory, memory_sequence_length=sequence_length, scale=True)
+      elif option == "bahdanau":
+        mechanism = tf.contrib.seq2seq.BahdanauAttention(
+          num_units, memory, memory_sequence_length=sequence_length)
+      elif option == "normed_bahdanau":
+        mechanism = tf.contrib.seq2seq.BahdanauAttention(
+          num_units,
+          memory,
+          memory_sequence_length=sequence_length,
+          normalize=True)
+      else:
+        raise ValueError("Invalid attention option: %s" % option)
 
-    return mechanism
+      return mechanism
+
+    return _create_attention_mechanism_fn
