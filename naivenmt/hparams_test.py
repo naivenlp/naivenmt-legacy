@@ -6,7 +6,7 @@ class TestHParams(unittest.TestCase):
 
   def test_hparams(self):
     hparams = Hparams("naivenmt/hparams.yml").build()
-    self.assertEqual("/tmp/model", hparams.out_dir)
+    self.assertEqual(256, hparams.num_units)
     self.assertEqual(None, hparams.random_seed)
     self.assertEqual(None, hparams.decay_scheme)
     self.assertEqual(True, hparams.avg_ckpts)

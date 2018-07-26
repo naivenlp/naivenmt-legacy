@@ -1,6 +1,7 @@
+import os
+
 import tensorflow as tf
 import yaml
-import os
 
 
 class Hparams(object):
@@ -13,22 +14,6 @@ class Hparams(object):
 
   def build(self):
     return tf.contrib.training.HParams(
-      # Data
-      src=self.hparams_config["src"],
-      tgt=self.hparams_config["tgt"],
-      train_prefix=self.hparams_config["train_prefix"],
-      dev_prefix=self.hparams_config["dev_prefix"],
-      test_prefix=self.hparams_config["test_prefix"],
-      vocab_prefix=self.hparams_config["vocab_prefix"],
-      embed_prefix=self.hparams_config["embed_prefix"],
-      out_dir=self.hparams_config["out_dir"],
-
-      # Vocab
-      sos=self.hparams_config["sos"] if self.hparams_config["sos"] else "<s>",
-      eos=self.hparams_config["eos"] if self.hparams_config["eos"] else "</s>",
-      subword_optiom=self.hparams_config["subword_option"],
-      check_special_token=self.hparams_config["check_special_token"],
-
       # Network
       num_units=self.hparams_config["num_units"],
       num_layers=self.hparams_config["num_layers"],
@@ -94,5 +79,4 @@ class Hparams(object):
       num_keep_ckpts=self.hparams_config["num_keep_ckpts"],
       avg_ckpts=self.hparams_config["avg_ckpts"],
       num_intra_threads=self.hparams_config["num_intra_threads"],
-      num_inter_threads=self.hparams_config["num_inter_threads"]
-    )
+      num_inter_threads=self.hparams_config["num_inter_threads"])

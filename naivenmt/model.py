@@ -41,11 +41,11 @@ class SequenceToSequence(AbstractModel):
     self.encoder = encoder
     self.decoder = decoder
 
-  def _build(self, features, labels, params, mode, config):
+  def _build(self, features, labels, params, mode, configs):
     with tf.variable_scope(self.scope, dtype=self.dtype):
-      encoder_outputs, encoder_state = self._encode(features, params)
+      encoder_outputs, encoder_state = self._encode(features, params, configs)
       logits, sample_id, final_context_state = self._decode(
-        mode, encoder_outputs, encoder_state, labels, params)
+        mode, encoder_outputs, encoder_state, labels, params, configs)
       if mode != tf.estimator.ModeKeys.PREDICT:
         with tf.device(utils.get_device_str(params.num_encoder_layers - 1,
                                             params.num_gpus)):
@@ -97,12 +97,14 @@ class SequenceToSequence(AbstractModel):
   def _serving_input_fn(self):
     return self.inputter.serving_input_receiver()
 
-  def _encode(self, features, params):
+  def _encode(self, features, params, configs):
     embedding_input = self.inputter.embedding_input(features)
     sequence_length = self.inputter.source_sequence_length()
-    return self.encoder.encode(embedding_input, sequence_length, params)
+    return self.encoder.encode(
+      embedding_input, sequence_length, params, configs)
 
-  def _decode(self, mode, encoder_outputs, encoder_state, labels, params):
+  def _decode(self,
+              mode, encoder_outputs, encoder_state, labels, params, configs):
     # embedding_input = self.inputter.embedding_input(labels)
     src_seq_len = self.inputter.source_sequence_length()
     tgt_seq_len = self.inputter.target_sequence_length()
@@ -113,7 +115,8 @@ class SequenceToSequence(AbstractModel):
       labels,
       src_seq_len,
       tgt_seq_len,
-      params)
+      params,
+      configs)
 
   def _compute_loss(self, logits, params):
     target_output = self.inputter.target_output

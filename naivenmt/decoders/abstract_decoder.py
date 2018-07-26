@@ -8,7 +8,7 @@ class DecoderInterface(abc.ABC):
 
   @abc.abstractmethod
   def decode(self, mode, encoder_outputs, encoder_state,
-             labels, src_seq_len, tgt_seq_len, params):
+             labels, src_seq_len, tgt_seq_len, params, configs):
     raise NotImplementedError()
 
 
@@ -22,7 +22,7 @@ class AbstractDecoder(DecoderInterface):
     self._attention_mechanism_fn = self._create_attention_mechanism_fn()
 
   def decode(self, mode, encoder_outputs, encoder_state,
-             labels, src_seq_len, tgt_seq_len, params):
+             labels, src_seq_len, tgt_seq_len, params, configs):
     with tf.variable_scope(self.scope) as scope:
       cell, decoder_initial_state = self._build_decoder_cell(
         mode, params, encoder_outputs, encoder_state, src_seq_len)
@@ -48,10 +48,10 @@ class AbstractDecoder(DecoderInterface):
         beam_width = params.beam_width
         length_penalty_weight = params.length_penalty_weight
         tgt_sos_id = self.embedding.decoder_embedding_input(
-          tf.constant(params.sos))
+          tf.constant(configs.sos))
         tgt_sos_id = tf.cast(tgt_sos_id, tf.int32)
         tgt_eos_id = self.embedding.decoder_embedding_input(
-          tf.constant(params.eos))
+          tf.constant(configs.eos))
         tgt_eos_id = tf.cast(tgt_eos_id, tf.int32)
 
         max_iteration = self._get_max_infer_iterations(src_seq_len, params)
