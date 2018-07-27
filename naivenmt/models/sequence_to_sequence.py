@@ -2,7 +2,7 @@ import abc
 
 import tensorflow as tf
 
-from . import utils
+from naivenmt import utils
 
 
 class AbstractModel(abc.ABC):
@@ -43,7 +43,8 @@ class SequenceToSequence(AbstractModel):
 
   def _build(self, features, labels, params, mode, configs):
     with tf.variable_scope(self.scope, dtype=self.dtype):
-      encoder_outputs, encoder_state = self._encode(features, params, configs)
+      encoder_outputs, encoder_state = self._encode(
+        mode, features, params, configs)
       logits, sample_id, final_context_state = self._decode(
         mode, encoder_outputs, encoder_state, labels, params, configs)
       if mode != tf.estimator.ModeKeys.PREDICT:
