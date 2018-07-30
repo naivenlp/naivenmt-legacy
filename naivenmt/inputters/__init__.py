@@ -1,13 +1,13 @@
 from .features import Features, ServingFeatures
 from .inputter import InputterInterface, Inputter
-from .iterator_hooks import DefaultInferIteratorHook
-from .iterator_hooks import DefaultTrainAndEvalIteratorHook
-from .iterator_hooks import IteratorHook, InferIteratorHook
+from .iterator_hooks import DefaultInferIteratorHookCreator
+from .iterator_hooks import DefaultIteratorHooksCreator
+from .iterator_hooks import IteratorHooksCreator, InferIteratorHook
 from .labels import Labels
 from .receivers import Receivers
 
 __all__ = ["Features", "Labels",
            "Inputter", "InputterInterface",
            "ServingFeatures", "Receivers",
-           "IteratorHook", "DefaultTrainAndEvalIteratorHook",
-           "InferIteratorHook", "DefaultInferIteratorHook"]
+           "IteratorHooksCreator", "DefaultIteratorHooksCreator",
+           "InferIteratorHook", "DefaultInferIteratorHookCreator"]
