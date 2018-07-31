@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from naivenmt.decoders import BasicDecoder
-from naivenmt.embedding import Embedding
+from naivenmt.embeddings.embedding import Embedding
 from naivenmt.encoders import BasicEncoder
 from naivenmt.inputters import Inputter
 from naivenmt.models import SequenceToSequence

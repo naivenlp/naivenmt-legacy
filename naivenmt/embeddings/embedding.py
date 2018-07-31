@@ -6,26 +6,44 @@ import codecs
 VOCAB_SIZE_THRESHOLD = 50000
 
 
-class AbstractEmbedding(abc.ABC):
+class EmbeddingInterface(abc.ABC):
 
   @abc.abstractmethod
   def encoder_embedding(self):
+    """Create embedding for encoder."""
     raise NotImplementedError()
 
   @abc.abstractmethod
   def decoder_embedding(self):
+    """Create embedding for decoder."""
     raise NotImplementedError()
 
   @abc.abstractmethod
   def encoder_embedding_input(self, inputs):
+    """Create encoder embedding input.
+
+    Args:
+      inputs: ids of source
+
+    Returns:
+      embedding presentation of inputs
+    """
     raise NotImplementedError()
 
   @abc.abstractmethod
   def decoder_embedding_input(self, inputs):
+    """Create decoder embedding input.
+
+    Args:
+      inputs: ids of target
+
+    Returns:
+      embedding presentation of inputs
+    """
     raise NotImplementedError()
 
 
-class Embedding(AbstractEmbedding):
+class Embedding(EmbeddingInterface):
 
   def __init__(self,
                src_vocab_size,
