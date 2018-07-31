@@ -165,3 +165,10 @@ class AbstractDecoder(DecoderInterface):
       max_iterations = tf.to_int32(tf.round(
         tf.to_float(max_encoder_length) * decoding_length_factor))
     return max_iterations
+
+  @staticmethod
+  def _get_device_str(device_id, num_gpus):
+    if num_gpus == 0:
+      return "/cpu:0"
+    device_str = "/gpu:%d" % (device_id % num_gpus)
+    return device_str

@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-from naivenmt import utils
 from naivenmt.decoders.basic_decoder import BasicDecoder
 
 
@@ -73,7 +72,7 @@ class AttentionDecoder(BasicDecoder):
       alignment_history=alignment_history,
       output_attention=self.output_attention,
       name="attention")
-    device = utils.get_device_str(self.num_decoder_layers - 1, self.num_gpus)
+    device = self._get_device_str(self.num_decoder_layers - 1, self.num_gpus)
     cell = tf.contrib.rnn.DeviceWrapper(cell, device)
 
     if self.pass_hidden_state:

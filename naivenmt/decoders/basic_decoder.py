@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-from naivenmt import utils
 from naivenmt.decoders.abstract_decoder import AbstractDecoder
 
 
@@ -67,8 +66,8 @@ class BasicDecoder(AbstractDecoder):
     else:
       return tf.contrib.rnn.MultiRNNCell(cell_list)
 
-  @staticmethod
-  def _cell_list(unit_type,
+  def _cell_list(self,
+                 unit_type,
                  num_units,
                  num_layers,
                  num_residual_layers,
@@ -83,7 +82,7 @@ class BasicDecoder(AbstractDecoder):
     assert single_cell_fn
     for i in range(num_layers):
       residual_conn = (i >= num_layers - num_residual_layers)
-      device_str = utils.get_device_str(i + base_gpu, num_gpus)
+      device_str = self._get_device_str(i + base_gpu, num_gpus)
       single_cell = single_cell_fn(
         unit_type, num_units, forget_bias, dropout, mode, residual_conn,
         device_str, residual_fn)
