@@ -3,7 +3,7 @@ import collections
 
 class Features(collections.namedtuple(
   "features",
-  ("source", "source_ids", "source_sequence_length"))):
+  ("source_ids", "source_sequence_length"))):
   """Features that feeds to Estimator's model_fn."""
   pass
 
