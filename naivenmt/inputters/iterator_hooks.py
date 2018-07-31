@@ -5,13 +5,16 @@ class IteratorHooksCreator(object):
   """Create hooks for train and eval iterator."""
 
   def create_batching_func(self, batch_size, src_eos_id, tgt_eos_id):
-    """Create a batching_func with signature (x) and return a
-      batch of padded dataset.
+    """Create a batching_func.
 
     Args:
       batch_size: batch size
       src_eos_id: source eos id
       tgt_eos_id: target eos id
+
+    Returns:
+      batching_func: a func with signature (x) and
+        return a padded batch of dataset `x`
     """
     raise NotImplementedError()
 
@@ -21,6 +24,10 @@ class IteratorHooksCreator(object):
     Args:
       src_max_len: maximum source sequence length
       num_buckets: number of buckets
+
+    Returns:
+      key_func: a func with signature (arg0, arg1, arg2, src_len, tgt_len)
+        and returns an tf.int64 bucket id
     """
     raise NotImplementedError()
 
@@ -31,6 +38,10 @@ class IteratorHooksCreator(object):
       batch_size: batch size
       src_eos_id: source eos id
       tgt_eos_id: target eos id
+
+    Returns:
+      reduce_func: a func with signature (arg0, windowed_data) and returns
+        a padded dataset.
     """
     raise NotImplementedError()
 
@@ -45,11 +56,16 @@ class InferIteratorHookCreator(object):
     Args:
       batch_size: batch size
       src_eos_id: eos id
+
+    Returns:
+      batching_func: a func with signature (x) and
+        returns a padded batch of dataset `x`
     """
     raise NotImplementedError()
 
 
 class DefaultIteratorHooksCreator(IteratorHooksCreator):
+  """Default hooks creator for training and evaluation's dataset iterator."""
 
   def create_batching_func(self, batch_size, src_eos_id, tgt_eos_id):
 
@@ -95,8 +111,10 @@ class DefaultIteratorHooksCreator(IteratorHooksCreator):
 
 
 class DefaultInferIteratorHookCreator(InferIteratorHookCreator):
+  """Default hook creator for inference's dataset iterator."""
 
   def create_batching_func(self, batch_size, src_eos_id):
+
     def _batching_func(x):
       return x.padded_batch(
         batch_size,
