@@ -115,15 +115,15 @@ class Inputter(InputterInterface):
   def iterator(self, mode):
     if mode == tf.estimator.ModeKeys.TRAIN:
       if not self._train_iterator:
-        self._make_train_iterator()
+        self._train_iterator = self._make_train_iterator()
       return self._train_iterator
     elif mode == tf.estimator.ModeKeys.EVAL:
       if not self._eval_iterator:
-        self._make_eval_iterator()
+        self._eval_iterator = self._make_eval_iterator()
       return self._eval_iterator
     elif mode == tf.estimator.ModeKeys.PREDICT:
       if not self._predict_iterator:
-        self._make_predict_iterator()
+        self._predict_iterator = self._make_predict_iterator()
       return self._predict_iterator
     else:
       raise ValueError("Unknown mode: %s" % mode)

@@ -35,7 +35,7 @@ class IteratorHooksCreator(object):
     raise NotImplementedError()
 
 
-class InferIteratorHook(object):
+class InferIteratorHookCreator(object):
   """Create hook(s) for infer iterator."""
 
   def create_batching_func(self, batch_size, src_eos_id):
@@ -94,7 +94,7 @@ class DefaultIteratorHooksCreator(IteratorHooksCreator):
     return _reduce_func
 
 
-class DefaultInferIteratorHookCreator(InferIteratorHook):
+class DefaultInferIteratorHookCreator(InferIteratorHookCreator):
 
   def create_batching_func(self, batch_size, src_eos_id):
     def _batching_func(x):
