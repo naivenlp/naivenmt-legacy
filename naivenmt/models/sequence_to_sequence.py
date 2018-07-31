@@ -3,54 +3,102 @@ import abc
 import tensorflow as tf
 
 from naivenmt import utils
+from naivenmt.inputters import Features, Labels
 
 
-class AbstractModel(abc.ABC):
+class ModelInterface(abc.ABC):
+  """NMT models' interface, for integrating with Estimator API."""
 
-  def __init__(self, scope=None, inputter=None, dtype=None):
+  def __init__(self, inputter=None, scope=None, dtype=None):
+    """Init model.
+
+    Args:
+      inputter: input data for training, evaluation and inference
+      scope: variable scope
+      dtype: dtype, default value tf.float32
+    """
     self.scope = scope
     self.inputter = inputter
-    if not dtype and inputter:
-      self.dtype = inputter.dtype
-    else:
-      self.dtype = dtype or tf.float32
+    self.dtype = dtype or tf.float32
 
   @abc.abstractmethod
   def model_fn(self):
+    """Create a model_fn for estimator,
+        so it's signature and return are the same as estimator's mode_fn.
+
+    Returns:
+      model_fn: estimator API's model_fn
+    """
     raise NotImplementedError()
 
   @abc.abstractmethod
-  def input_fn(self, mode, params):
+  def input_fn(self, mode):
+    """Create a input_fn for estimator api,
+        so it's signature and return are the same as estimator's input_fn.
+
+    Args:
+        mode: mode, one of tf.estimator.ModeKeys
+
+    Returns:
+        input_fn: estimator API's input fn
+    """
     raise NotImplementedError()
 
   @abc.abstractmethod
   def serving_input_fn(self):
+    """Create a serving_input_fn to export model and serve it on tensorflow serving."""
     raise NotImplementedError()
 
 
-class SequenceToSequence(AbstractModel):
+class SequenceToSequence(ModelInterface):
+  """Sequence to sequence base model."""
 
   def __init__(self,
                inputter=None,
                encoder=None,
                decoder=None,
                scope="seq2seq",
-               dtype=None):
-    super().__init__(scope, inputter, dtype)
+               dtype=tf.float32):
+    """Init seq2seq model.
+
+    Args:
+      inputter: input data for training, evaluation and inference
+      encoder: encode source inputs
+      decoder: decode target inputs
+      scope: variable scope
+      dtype: dtype of variables
+    """
+    super().__init__(inputter=inputter, scope=scope, dtype=dtype)
     self.inputter = inputter
     self.encoder = encoder
     self.decoder = decoder
 
   def _build(self, features, labels, params, mode, configs):
-    with tf.variable_scope(self.scope, dtype=self.dtype):
-      encoder_outputs, encoder_state = self._encode(
-        mode, features, params, configs)
+    """Encode source inputs and decode target inputs, calculate loss.
+
+    Args:
+      features: first returned value of input_fn, instance of `naivenmt.inputters.Features`
+      labels: second returned value of input_fn, instance of `naivenmt.inputters.Labels`
+      params: hparams
+      mode: mode
+      configs: configs
+
+    Returns:
+      logits: logits
+      loss: loss of train and eval, None for predict
+      final_context_state: final context state of decoder
+      sample_id: tokens ids from decoder
+    """
+    with tf.variable_scope(self.scope, dtype=self.dtype,
+                           initializer=self._initializer(mode, params)):
+      encoder_outputs, encoder_state = self._encode(mode, features)
+      src_seq_len = features.source_sequence_length
       logits, sample_id, final_context_state = self._decode(
-        mode, encoder_outputs, encoder_state, labels, params, configs)
+        mode, encoder_outputs, encoder_state, labels, src_seq_len)
       if mode != tf.estimator.ModeKeys.PREDICT:
         with tf.device(utils.get_device_str(params.num_encoder_layers - 1,
                                             params.num_gpus)):
-          loss = self._compute_loss(logits, params)
+          loss = self._compute_loss(logits, params, labels)
       else:
         loss = None
       return logits, loss, final_context_state, sample_id
@@ -87,40 +135,69 @@ class SequenceToSequence(AbstractModel):
 
     return _model_fn
 
-  def input_fn(self, mode, params):
-    iterator = self.inputter.iterator(mode, params)
+  def input_fn(self, mode):
+    """Input fn.
+
+    Args:
+      mode: mode, to decide which iterator to generate features and labels
+
+    Returns:
+      features: features, instance of ``naivenmt.inputters.Features``
+      labels: labels, instance of ``naivenmt.inputters.Labels``
+    """
+    iterator = self.inputter.iterator(mode)
     tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS, iterator.initializer)
-    return lambda: iterator.get_next()
+    src_ids, tgt_input_ids, tgt_output_ids, src_len, tgt_len = (
+      iterator.get_next())
+    features = Features(source_ids=src_ids,
+                        source_sequence_length=src_len)
+    labels = Labels(target_input_ids=tgt_input_ids,
+                    target_output_ids=tgt_output_ids,
+                    target_sequence_length=tgt_len)
+    # TODO(luozhouyang) use lambda?
+    return features, labels
 
   def serving_input_fn(self):
     return lambda: self._serving_input_fn()
 
   def _serving_input_fn(self):
-    return self.inputter.serving_input_receiver()
+    raise NotImplementedError()
 
-  def _encode(self, mode, features, params, configs):
-    # embedding_input = self.inputter.embedding_input(features)
-    sequence_length = self.inputter.source_sequence_length()
-    return self.encoder.encode(
-      mode, features, sequence_length, params, configs)
+  def _encode(self, mode, features):
+    """Encode source inputs.
 
-  def _decode(self,
-              mode, encoder_outputs, encoder_state, labels, params, configs):
-    # embedding_input = self.inputter.embedding_input(labels)
-    src_seq_len = self.inputter.source_sequence_length()
-    tgt_seq_len = self.inputter.target_sequence_length()
-    return self.decoder.decode(
-      mode,
-      encoder_outputs,
-      encoder_state,
-      labels,
-      src_seq_len,
-      tgt_seq_len,
-      params,
-      configs)
+    Args:
+      mode: mode
+      features: input features, instance of `naivenmt.inputters.Features`
 
-  def _compute_loss(self, logits, params):
-    target_output = self.inputter.target_output
+    Returns:
+      encoder_outputs: encoder's outputs
+      encoder_state: encoder's state
+    """
+    return self.encoder.encode(mode, features)
+
+  def _decode(self, mode, encoder_outputs, encoder_state, labels, src_seq_len):
+    """Decode target inputs.
+
+    Args:
+      mode: mode
+      encoder_outputs: encoder's outputs
+      encoder_state: encoder's state
+      labels: input labels, instance of `naivenmt.inputters.Labels`
+      src_seq_len: source sequence length
+
+    Returns:
+      logits: logits
+      sample_id: sample id
+      final_context_state: decoder's state
+    """
+    return self.decoder.decode(mode, encoder_outputs, encoder_state,
+                               labels, src_seq_len)
+
+  @staticmethod
+  def _compute_loss(logits, params, labels):
+    target_output = labels.target_output_ids
+    target_sequence_length = labels.target_sequence_length
     if params.time_major:
       target_output = tf.transpose(target_output)
     time_axis = 0 if params.time_major else 1
@@ -129,7 +206,7 @@ class SequenceToSequence(AbstractModel):
     crossent = tf.nn.sparse_softmax_cross_entropy_with_logits(
       labels=target_output, logits=logits)
     target_weights = tf.sequence_mask(
-      self.inputter.target_sequence_length, max_time, dtype=logits.dtype)
+      target_sequence_length, max_time, dtype=logits.dtype)
     if params.time_major:
       target_weights = tf.transpose(target_weights)
     loss = tf.reduce_sum(crossent * target_weights) / tf.to_float(
@@ -224,10 +301,37 @@ class SequenceToSequence(AbstractModel):
     return None
 
   def _decode_predictions(self, sample_id, time_major):
-    sample_words = self.inputter.reverse_target_vocab_table.lookup(
+    """Convert ids to strings."""
+    sample_words = self.inputter.target_reverse_vocab_table.lookup(
       tf.to_int64(sample_id))
     if time_major:
       sample_words = sample_words.transpose()
     elif sample_words.ndim == 3:
       sample_words = sample_words.transpose([2, 0, 1])
     return sample_words
+
+  def _initializer(self, mode, params):
+    """Variables initializer. Only train mode need a initializer.
+
+    Args:
+      mode: mode
+      params: hparams
+
+    Returns:
+      initializer: variables initializer if mode is train, otherwise None
+    """
+    if mode != tf.estimator.ModeKeys.TRAIN:
+      return None
+    init_op = params.init_op
+    seed = params.random_seed
+    init_weight = params.init_weight
+    if init_op == "uniform":
+      assert init_weight
+      return tf.random_uniform_initializer(
+        -init_weight, init_weight, seed=seed, dtype=self.dtype)
+    elif init_op == "glorot_normal":
+      return tf.keras.initializers.glorot_normal(seed=seed)
+    elif init_op == "glorot_uniform":
+      return tf.keras.initializers.glorot_uniform(seed=seed)
+    else:
+      raise ValueError("Unknown init_op: %s" % init_op)
