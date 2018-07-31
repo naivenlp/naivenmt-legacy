@@ -161,7 +161,8 @@ class SequenceToSequence(ModelInterface):
     return lambda: self._serving_input_fn()
 
   def _serving_input_fn(self):
-    raise NotImplementedError()
+    receiver_tensors, features = self.inputter.serving_input()
+    return tf.estimator.export.ServingInputReceiver(features, receiver_tensors)
 
   def _encode(self, mode, features):
     """Encode source inputs.

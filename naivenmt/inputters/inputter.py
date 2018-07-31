@@ -63,6 +63,11 @@ class InputterInterface(abc.ABC):
   def target_sequence_length_infer(self):
     raise NotImplementedError()
 
+  @property
+  @abc.abstractmethod
+  def serving_input(self):
+    raise NotImplementedError()
+
 
 class Inputter(InputterInterface):
 
@@ -332,3 +337,15 @@ class Inputter(InputterInterface):
   @property
   def target_sequence_length_infer(self):
     return self._target_sequence_length_infer
+
+  @property
+  def serving_input(self):
+    receiver_tensors = {
+      "tokens": tf.placeholder(tf.string, shape=(None, None, None)),
+      # "length": tf.placeholder(tf.int32, shape=(None,))
+    }
+    features = receiver_tensors.copy()
+    features["tokens_ids"] = self.source_vocab_table.lookup(
+      features["tokens"])
+    # TODO(luozhouyang) convert features to ``naivenmt.inputters.ServingFeatures``
+    return receiver_tensors, features
