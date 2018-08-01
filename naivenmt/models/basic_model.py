@@ -12,16 +12,19 @@ class BasicModel(SequenceToSequence):
     inputter = Inputter(configs=configs,
                         params=params,
                         predict_file=infer_file)
-    # TODO(luozhouyang) Add `source_vocab_size` and `target_vocab_size` to params
-    # TODO(luozhouyang) Add `source_embedding_size` and `target_embedding_size` to params
-    embedding = Embedding(src_vocab_size=params.source_vocab_size,
-                          tgt_vocab_size=params.target_vocab_size,
+    embedding = Embedding(src_vocab_size=configs.source_vocab_size,
+                          tgt_vocab_size=configs.target_vocab_size,
                           share_vocab=params.share_vocab,
                           src_embedding_size=params.source_embedding_size,
                           tgt_embedding_size=params.target_embedding_size,
-                          src_vocab_file=configs.src_vocab_file,
-                          tgt_vocab_file=configs.tgt_vocab_file)
+                          src_vocab_file=configs.source_vocab_file,
+                          tgt_vocab_file=configs.target_vocab_file,
+                          src_embedding_file=configs.source_embedding_file,
+                          tgt_embedding_file=configs.target_embedding_file)
     encoder = BasicEncoder(params=params, embedding=embedding)
-    decoder = BasicDecoder(params=params, embedding=embedding,
-                           sos=configs.sos, eos=configs.eos)
+    decoder = BasicDecoder(configs=configs,
+                           params=params,
+                           embedding=embedding,
+                           sos=configs.sos,
+                           eos=configs.eos)
     super().__init__(inputter=inputter, encoder=encoder, decoder=decoder)
