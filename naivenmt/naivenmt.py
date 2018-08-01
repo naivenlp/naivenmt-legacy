@@ -1,8 +1,11 @@
 import abc
 import argparse
 import sys
+import os
+import codecs
 
 import tensorflow as tf
+from tensorflow.python.estimator.util import fn_args
 
 from naivenmt.configs import add_arguments
 from naivenmt.configs import Hparams
@@ -33,28 +36,101 @@ class NaiveNMT(NaiveNMTInterface):
   def __init__(self, hparams):
     self.hparams = hparams
     self.model = self._create_model()
+    self.estimator = self._create_estimator()
+
+  def _create_estimator(self):
+    sess_config = tf.ConfigProto(
+      allow_soft_placement=True,
+      log_device_placement=False,
+      gpu_options=tf.GPUOptions(
+        allow_growth=False))
+
+    # TODO(luozhouyang) set configs to sess in models
+    run_configs = tf.estimator.RunConfig(
+      model_dir=self.hparams.out_dir,
+      session_config=sess_config,
+      tf_random_seed=self.hparams.random_seed)
+
+    return tf.estimator.Estimator(
+      model_fn=self.model.model_fn(),
+      model_dir=self.hparams.out_dir,
+      config=run_configs,
+      params=self.hparams)
 
   def _create_model(self):
     if not self.hparams.attention:
-      return BasicModel(params=self.hparams)
-
+      return BasicModel(params=self.hparams,
+                        predict_file=self.hparams.inference_input_file)
     if self.hparams.attention_architecture == "standard":
-      return AttentionModel(params=self.hparams)
+      return AttentionModel(params=self.hparams,
+                            predict_file=self.hparams.inference_input_file)
     if self.hparams.attention_architecture in ["gnmt", "gnmt_v2"]:
-      return GNMTModel(params=self.hparams)
-    raise ValueError("Can not device which model to use.")
+      return GNMTModel(params=self.hparams,
+                       predict_file=self.hparams.inference_input_file)
+    raise ValueError("Can not create model.")
 
   def train(self):
-    pass
+    # TODO(luozhouyang) add hooks
+    train_hooks = []
+    train_spec = tf.estimator.TrainSpec(
+      input_fn=self.model.input_fn(tf.estimator.ModeKeys.TRAIN),
+      max_steps=self.hparams.num_train_steps,
+      hooks=train_hooks)
+
+    self.estimator.train(
+      input_fn=train_spec.input_fn,
+      hooks=train_spec.hooks,
+      max_steps=train_spec.max_steps)
+    # TODO(luozhouyang) average ckpts
 
   def eval(self):
-    pass
+    # TODO(luozhouyang) add hooks and set checkpoint_path
+    eval_hooks = []
+    self.estimator.evaluate(
+      input_fn=self.model.input_fn(tf.estimator.ModeKeys.EVAL),
+      hooks=eval_hooks,
+      checkpoint_path=None)
 
   def predict(self):
-    pass
+    infer_input_file = self.hparams.inference_input_file
+    if not infer_input_file:
+      raise ValueError("Inference input file must be provided.")
+    infer_output_file = self.hparams.inference_output_file
+    if not infer_output_file:
+      infer_output_file = os.path.join(self.hparams.out_dir, "infer_output.txt")
+    # TODO(luozhouyang) add option to set ckpt
+    checkpoint_path = tf.train.latest_checkpoint(self.hparams.out_dir)
+    # TODO(luozhouyang) add infer hooks
+    infer_hooks = []
+    predictions = self.estimator.predict(
+      input_fn=self.model.input_fn(tf.estimator.ModeKeys.PREDICT),
+      checkpoint_path=checkpoint_path,
+      hooks=infer_hooks)
+
+    with codecs.getwriter("utf-8")(
+            tf.gfile.GFile(infer_output_file, mode="wb")) as fout:
+      for prediction in predictions:
+        fout.write((prediction + b'\n').decode("utf-8"))
 
   def export(self):
-    pass
+    # TODO(luozhouyang) add option to set ckpt
+    checkpoint_path = tf.train.latest_checkpoint(self.hparams.out_dir)
+
+    export_dir = os.path.join(self.estimator.model_dir, "export")
+    if not os.path.isdir(export_dir):
+      os.makedirs(export_dir)
+
+    kwargs = {}
+    if "strip_default_attrs" in fn_args(self.estimator.export_savedmodel):
+      # Set strip_default_attrs to True for TensorFlow 1.6+ to stay consistent
+      # with the behavior of tf.estimator.Exporter.
+      kwargs["strip_default_attrs"] = True
+
+    self.estimator.export_savedmodel(
+      export_dir,
+      serving_input_receiver_fn=self.model.serving_input_fn(),
+      checkpoint_path=checkpoint_path,
+      **kwargs)
 
 
 def main(unused_args):
