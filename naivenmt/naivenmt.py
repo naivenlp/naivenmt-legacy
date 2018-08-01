@@ -1,7 +1,12 @@
 import abc
 import argparse
+import sys
+
+import tensorflow as tf
+
+from naivenmt.configs import add_arguments
 from naivenmt.configs import Configs
-from naivenmt.hparams import Hparams
+from naivenmt.configs import Hparams
 
 
 class NaiveNMTInterface(abc.ABC):
@@ -25,9 +30,9 @@ class NaiveNMTInterface(abc.ABC):
 
 class NaiveNMT(NaiveNMTInterface):
 
-  def __init__(self, configs_file, hparams_file):
-    self.configs = Configs(configs_file=configs_file)
-    self.hparams = Hparams(hparams_file=hparams_file).build()
+  def __init__(self, configs, hparams):
+    self.configs = configs
+    self.hparams = hparams
 
   def train(self):
     pass
@@ -42,30 +47,29 @@ class NaiveNMT(NaiveNMTInterface):
     pass
 
 
-def main():
+def main(unused_args):
+  configs = Configs(FLAGS).build()
+  hparams = Hparams(FLAGS).build()
+  naive_nmt = NaiveNMT(configs, hparams)
+  if FLAGS.mode == "train":
+    naive_nmt.train()
+  elif FLAGS.mode == "eval":
+    naive_nmt.eval()
+  elif FLAGS.mode == "predict":
+    naive_nmt.predict()
+  elif FLAGS.mode == "export":
+    naive_nmt.export()
+  else:
+    raise ValueError("Unknown mode: %s" % FLAGS.mode)
+
+
+FLAGS = None
+if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--mode", type=str,
                       choices=["train", "eval", "predict", "export"],
                       default="train",
-                      help="Which operation you want to do.")
-  parser.add_argument("--configs_file", type=str, required=True,
-                      help="Configs file.")
-  parser.add_argument("--hparams_file", type=str, required=True,
-                      help="Hparams file.")
-
-  args, _ = parser.parse_known_args()
-  naive_nmt = NaiveNMT(args.configs_file, args.hparams_file)
-  if args.mode == "train":
-    naive_nmt.train()
-  elif args.mode == "eval":
-    naive_nmt.eval()
-  elif args.mode == "predict":
-    naive_nmt.predict()
-  elif args.mode == "export":
-    naive_nmt.export()
-  else:
-    raise ValueError("Unknown mode: %s" % args.mode)
-
-
-if __name__ == "__main__":
-  main()
+                      help="Run mode.")
+  add_arguments(parser)
+  FLAGS, unparsed = parser.parse_known_args()
+  tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
