@@ -8,9 +8,9 @@ from naivenmt.models import SequenceToSequence
 class BasicModel(SequenceToSequence):
   """Basic NMT model."""
 
-  def __init__(self, params, infer_file=None):
+  def __init__(self, params, predict_file=None):
     inputter = Inputter(params=params,
-                        predict_file=infer_file)
+                        predict_file=predict_file)
     embedding = Embedding(src_vocab_size=params.source_vocab_size,
                           tgt_vocab_size=params.target_vocab_size,
                           share_vocab=params.share_vocab,
