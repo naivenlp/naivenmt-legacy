@@ -1,3 +1,15 @@
+src: src
+tgt: tgt
+train_prefix: testdata/train
+dev_prefix: testdata/dev
+test_prefix: testdata/test
+vocab_prefix: testdata/vocab
+embed_prefix: testdata/embed
+out_dir: /tmp/model
+sos: <s>
+eos: </s>
+subword_option: bpe
+check_special_token: false
 num_units: 256
 num_layers: 4
 num_encoder_layers: 2

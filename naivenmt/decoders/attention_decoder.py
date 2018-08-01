@@ -7,7 +7,6 @@ class AttentionDecoder(BasicDecoder):
   """Standard attention decoder."""
 
   def __init__(self,
-               configs,
                params,
                embedding,
                sos,
@@ -16,8 +15,7 @@ class AttentionDecoder(BasicDecoder):
                dtype=tf.float32,
                single_cell_fn=None,
                attention_mechanism_fn=None):
-    super().__init__(configs=configs,
-                     params=params,
+    super().__init__(params=params,
                      embedding=embedding,
                      sos=sos,
                      eos=eos,

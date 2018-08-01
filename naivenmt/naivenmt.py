@@ -5,8 +5,8 @@ import sys
 import tensorflow as tf
 
 from naivenmt.configs import add_arguments
-from naivenmt.configs import Configs
 from naivenmt.configs import Hparams
+from naivenmt.models import BasicModel, AttentionModel, GNMTModel
 
 
 class NaiveNMTInterface(abc.ABC):
@@ -30,9 +30,19 @@ class NaiveNMTInterface(abc.ABC):
 
 class NaiveNMT(NaiveNMTInterface):
 
-  def __init__(self, configs, hparams):
-    self.configs = configs
+  def __init__(self, hparams):
     self.hparams = hparams
+    self.model = self._create_model()
+
+  def _create_model(self):
+    if not self.hparams.attention:
+      return BasicModel(params=self.hparams)
+
+    if self.hparams.attention_architecture == "standard":
+      return AttentionModel(params=self.hparams)
+    if self.hparams.attention_architecture in ["gnmt", "gnmt_v2"]:
+      return GNMTModel(params=self.hparams)
+    raise ValueError("Can not device which model to use.")
 
   def train(self):
     pass
@@ -48,9 +58,8 @@ class NaiveNMT(NaiveNMTInterface):
 
 
 def main(unused_args):
-  configs = Configs(FLAGS).build()
   hparams = Hparams(FLAGS).build()
-  naive_nmt = NaiveNMT(configs, hparams)
+  naive_nmt = NaiveNMT(hparams)
   if FLAGS.mode == "train":
     naive_nmt.train()
   elif FLAGS.mode == "eval":

@@ -7,7 +7,6 @@ class BasicDecoder(AbstractDecoder):
   """Basic decoder."""
 
   def __init__(self,
-               configs,
                params,
                embedding,
                sos,
@@ -15,8 +14,7 @@ class BasicDecoder(AbstractDecoder):
                scope="decoder",
                dtype=tf.float32,
                single_cell_fn=None):
-    super().__init__(configs=configs,
-                     params=params,
+    super().__init__(params=params,
                      embedding=embedding,
                      sos=sos,
                      eos=eos,

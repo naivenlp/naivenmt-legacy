@@ -71,14 +71,14 @@ class InputterInterface(abc.ABC):
 
 class Inputter(InputterInterface):
 
-  def __init__(self, configs, params,
+  def __init__(self,
+               params,
                predict_file=None,
                iterator_hook=DefaultIteratorHooksCreator(),
                infer_iterator_hook=DefaultInferIteratorHookCreator()):
     """Inputter for models.
 
     Args:
-      configs: configs
       params: hparams
       predict_file: file to do predict
       iterator_hook: train and eval iterator's hook. Must be an instance of
@@ -86,16 +86,16 @@ class Inputter(InputterInterface):
       infer_iterator_hook: infer iterator's hook. Must be an instance of
         `naivenmt.inputters.InferIteratorHooksCreator` or its subclass
     """
-    self.source_train_file = configs.src_train_file
-    self.target_train_file = configs.tgt_train_file
-    self.source_eval_file = configs.src_dev_file
-    self.target_eval_file = configs.tgt_dev_file
-    self.source_vocab_file = configs.src_vocab_file
-    self.target_vocab_file = configs.tgt_vocab_file
+    self.source_train_file = params.source_train_file
+    self.target_train_file = params.target_train_file
+    self.source_eval_file = params.source_dev_file
+    self.target_eval_file = params.target_dev_file
+    self.source_vocab_file = params.source_vocab_file
+    self.target_vocab_file = params.target_vocab_file
     self.batch_size = params.batch_size
     self.infer_batch_size = params.infer_batch_size
-    self.sos = configs.sos
-    self.eos = configs.eos
+    self.sos = params.sos
+    self.eos = params.eos
     self.random_seed = params.random_seed
     self.num_buckets = params.num_buckets
 
