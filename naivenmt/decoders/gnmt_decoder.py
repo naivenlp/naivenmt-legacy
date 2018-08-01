@@ -8,6 +8,7 @@ from naivenmt.decoders.gnmt_attention_multi_cell import GNMTAttentionMultiCell
 class GNMTDecoder(AttentionDecoder):
 
   def __init__(self,
+               configs,
                params,
                embedding,
                sos,
@@ -17,7 +18,8 @@ class GNMTDecoder(AttentionDecoder):
                single_cell_fn=None,
                attention_mechanism_fn=None,
                residual_fn=None):
-    super().__init__(params=params,
+    super().__init__(configs=configs,
+                     params=params,
                      embedding=embedding,
                      sos=sos,
                      eos=eos,

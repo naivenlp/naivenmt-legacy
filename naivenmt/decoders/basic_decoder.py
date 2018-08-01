@@ -7,6 +7,7 @@ class BasicDecoder(AbstractDecoder):
   """Basic decoder."""
 
   def __init__(self,
+               configs,
                params,
                embedding,
                sos,
@@ -14,7 +15,8 @@ class BasicDecoder(AbstractDecoder):
                scope="decoder",
                dtype=tf.float32,
                single_cell_fn=None):
-    super().__init__(params=params,
+    super().__init__(configs=configs,
+                     params=params,
                      embedding=embedding,
                      sos=sos,
                      eos=eos,
@@ -26,7 +28,6 @@ class BasicDecoder(AbstractDecoder):
     self.unit_type = params.unit_type
     self.num_units = params.num_units
     self.num_decoder_layers = params.num_decoder_layers
-    # TODO(luozhouyang) add `num_decoder_residual_layers` in hparams
     self.num_decoder_residual_layers = params.num_decoder_residual_layers
     self.forget_bias = params.forget_bias
     self.dropout = params.dropout

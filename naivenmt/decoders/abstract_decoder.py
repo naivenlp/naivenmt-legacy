@@ -29,6 +29,7 @@ class DecoderInterface(abc.ABC):
 class AbstractDecoder(DecoderInterface):
 
   def __init__(self,
+               configs,
                params,
                embedding,
                sos,
@@ -55,8 +56,7 @@ class AbstractDecoder(DecoderInterface):
     self.beam_width = params.beam_width
     self.length_penalty_weight = params.length_penalty_weight
     self.infer_batch_size = params.infer_batch_size
-    # TODO(luozhouyang) add `target_vocab_size` to hparams
-    self.target_vocab_size = params.target_vocab_size
+    self.target_vocab_size = configs.target_vocab_size
     self.tgt_max_len_infer = params.tgt_max_len_infer
     self.sampling_temperature = params.sampling_temperature
     self.random_seed = params.random_seed
