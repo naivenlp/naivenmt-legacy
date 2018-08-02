@@ -219,14 +219,15 @@ class SequenceToSequence(ModelInterface):
     lr = self._warmup_lr(lr, global_steps, params)
     lr = self._decay_lr(lr, global_steps, params)
     opt = self._optimizer(lr, params)
+    trainable_params = tf.trainable_variables()
     gradients = tf.gradients(
       loss,
-      params,
+      trainable_params,
       colocate_gradients_with_ops=params.colocate_gradients_with_ops)
     clipped_grads, grad_norm_summary, grad_norm = self._clip_gradients(
       gradients, params.max_gradient_norm)
     update = opt.apply_gradients(
-      zip(clipped_grads, params), global_step=global_steps)
+      zip(clipped_grads, trainable_params), global_step=global_steps)
     tf.summary.merge([tf.summary.scalar("lr", lr),
                       tf.summary.scalar("train_loss", loss)
                       ] + grad_norm_summary)
