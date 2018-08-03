@@ -25,12 +25,16 @@ class GNMTModel(SequenceToSequence):
                           src_vocab_file=params.source_vocab_file,
                           tgt_vocab_file=params.target_vocab_file,
                           src_embedding_file=params.source_embedding_file,
-                          tgt_embedding_file=params.target_embedding_file)
-    encoder = GNMTEncoder(params=params, embedding=embedding)
+                          tgt_embedding_file=params.target_embedding_file,
+                          dtype=dtype)
+    encoder = GNMTEncoder(params=params,
+                          embedding=embedding,
+                          dtype=dtype)
     decoder = GNMTDecoder(params=params,
                           embedding=embedding,
                           sos=params.sos,
-                          eos=params.eos)
+                          eos=params.eos,
+                          dtype=dtype)
     super().__init__(inputter=inputter,
                      encoder=encoder,
                      decoder=decoder,

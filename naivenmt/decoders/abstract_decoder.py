@@ -33,8 +33,8 @@ class AbstractDecoder(DecoderInterface):
                embedding,
                sos,
                eos,
-               scope="decoder",
-               dtype=tf.float32):
+               scope=None,
+               dtype=None):
     """Init decoder.
 
     Args:
@@ -48,8 +48,8 @@ class AbstractDecoder(DecoderInterface):
     self.embedding = embedding
     self.sos = sos
     self.eos = eos
-    self.scope = scope
-    self.dtype = dtype
+    self.scope = scope or "decoder"
+    self.dtype = dtype or tf.float32
 
     self.time_major = params.time_major
     self.beam_width = params.beam_width

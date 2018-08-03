@@ -27,8 +27,8 @@ class AbstractEncoder(EncoderInterface):
   def __init__(self,
                params,
                embedding,
-               scope="encoder",
-               dtype=tf.float32):
+               scope=None,
+               dtype=None):
     """Init abstract encoder.
 
     Args:
@@ -39,8 +39,8 @@ class AbstractEncoder(EncoderInterface):
     """
 
     self.embedding = embedding
-    self.scope = scope
-    self.dtype = dtype
+    self.scope = scope or "encoder"
+    self.dtype = dtype or tf.float32
 
     self.num_encoder_layers = params.num_encoder_layers
     self.num_encoder_residual_layers = params.num_encoder_residual_layers

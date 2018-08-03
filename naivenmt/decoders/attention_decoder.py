@@ -11,8 +11,8 @@ class AttentionDecoder(BasicDecoder):
                embedding,
                sos,
                eos,
-               scope="decoder",
-               dtype=tf.float32,
+               scope=None,
+               dtype=None,
                single_cell_fn=None,
                attention_mechanism_fn=None):
     super().__init__(params=params,

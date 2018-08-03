@@ -12,8 +12,8 @@ class GNMTDecoder(AttentionDecoder):
                embedding,
                sos,
                eos,
-               scope="decoder",
-               dtype=tf.float32,
+               scope=None,
+               dtype=None,
                single_cell_fn=None,
                attention_mechanism_fn=None,
                residual_fn=None):

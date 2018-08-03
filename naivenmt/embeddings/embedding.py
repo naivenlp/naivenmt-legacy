@@ -52,12 +52,12 @@ class Embedding(EmbeddingInterface):
                src_embedding_size,
                tgt_embedding_size,
                num_partitions=0,
-               dtype=tf.float32,
+               dtype=None,
                src_vocab_file=None,
                tgt_vocab_file=None,
                src_embedding_file=None,
                tgt_embedding_file=None,
-               scope="embedding"):
+               scope=None):
     self.share_vocab = share_vocab
     self.src_vocab_file = src_vocab_file
     self.tgt_vocab_file = tgt_vocab_file
@@ -68,8 +68,8 @@ class Embedding(EmbeddingInterface):
     self.src_embedding_file = src_embedding_file
     self.tgt_embedding_file = tgt_embedding_file
     self.num_partitions = num_partitions
-    self.dtype = dtype
-    self.scope = scope
+    self.dtype = dtype or tf.float32
+    self.scope = scope or "embedding"
     self._encoder_embedding = None
     self._decoder_embedding = None
 

@@ -9,8 +9,8 @@ class GNMTEncoder(BasicEncoder):
   def __init__(self,
                params,
                embedding,
-               scope="encoder",
-               dtype=tf.float32,
+               scope=None,
+               dtype=None,
                single_cell_fn=None):
     """Init encoder.
 
