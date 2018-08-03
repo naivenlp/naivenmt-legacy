@@ -278,6 +278,7 @@ class SequenceToSequence(ModelInterface):
         hook.on_gradients_created(gradients)
         hook.on_clipped_grads_created(clipped_grads)
         hook.on_grad_norm_created(grad_norm)
+        hook.end()
 
   def _warmup_lr(self, lr, global_steps, params):
     warmup_steps = params.warmup_steps
