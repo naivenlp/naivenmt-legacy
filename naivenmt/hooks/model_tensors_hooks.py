@@ -58,3 +58,8 @@ class ModelTensorsHook(abc.ABC):
       loss
     """
     raise NotImplementedError()
+
+  @abc.abstractmethod
+  def end(self):
+    """Called after all above tensors being created."""
+    raise NotImplementedError()
