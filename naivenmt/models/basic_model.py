@@ -8,7 +8,13 @@ from naivenmt.models import SequenceToSequence
 class BasicModel(SequenceToSequence):
   """Basic NMT model."""
 
-  def __init__(self, params, predict_file=None):
+  def __init__(self,
+               params,
+               predict_file=None,
+               scope=None,
+               dtype=None,
+               lifecycle_hooks=None,
+               tensors_hooks=None):
     inputter = Inputter(params=params,
                         predict_file=predict_file)
     embedding = Embedding(src_vocab_size=params.source_vocab_size,
@@ -25,4 +31,10 @@ class BasicModel(SequenceToSequence):
                            embedding=embedding,
                            sos=params.sos,
                            eos=params.eos)
-    super().__init__(inputter=inputter, encoder=encoder, decoder=decoder)
+    super().__init__(inputter=inputter,
+                     encoder=encoder,
+                     decoder=decoder,
+                     scope=scope,
+                     dtype=dtype,
+                     lifecycle_hooks=lifecycle_hooks,
+                     tensors_hooks=tensors_hooks)

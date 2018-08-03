@@ -16,7 +16,7 @@ class ModelInterface(abc.ABC):
       scope: variable scope
       dtype: dtype, default value tf.float32
     """
-    self.scope = scope
+    self.scope = scope or "seq2seq"
     self.inputter = inputter
     self.dtype = dtype or tf.float32
 
@@ -56,8 +56,10 @@ class SequenceToSequence(ModelInterface):
                inputter=None,
                encoder=None,
                decoder=None,
-               scope="seq2seq",
-               dtype=tf.float32):
+               scope=None,
+               dtype=None,
+               lifecycle_hooks=None,
+               tensors_hooks=None):
     """Init seq2seq model.
 
     Args:
@@ -66,11 +68,15 @@ class SequenceToSequence(ModelInterface):
       decoder: decode target inputs
       scope: variable scope
       dtype: dtype of variables
+      lifecycle_hooks: model's lifecycle listeners
+      tensors_hooks: tensors' listeners
     """
     super().__init__(inputter=inputter, scope=scope, dtype=dtype)
     self.inputter = inputter
     self.encoder = encoder
     self.decoder = decoder
+    self.lifecycle_hooks = lifecycle_hooks
+    self.tensors_hooks = tensors_hooks
 
   def _build(self, features, labels, params, mode, configs):
     """Encode source inputs and decode target inputs, calculate loss.
@@ -90,8 +96,14 @@ class SequenceToSequence(ModelInterface):
     """
     with tf.variable_scope(self.scope, dtype=self.dtype,
                            initializer=self._initializer(mode, params)):
+
+      self._lifecycle_before_encode(mode, features)
       encoder_outputs, encoder_state = self._encode(mode, features)
+      self._lifecycle_after_encode(
+        mode, features, encoder_outputs, encoder_state)
       src_seq_len = features.source_sequence_length
+      self._lifecycle_before_decode(
+        mode, encoder_outputs, encoder_state, labels, src_seq_len)
       logits, sample_id, final_context_state = self._decode(
         mode, encoder_outputs, encoder_state, labels, src_seq_len)
       if mode != tf.estimator.ModeKeys.PREDICT:
@@ -100,6 +112,8 @@ class SequenceToSequence(ModelInterface):
           loss = self._compute_loss(logits, params, labels)
       else:
         loss = None
+      self._lifecycle_after_decode(
+        mode, logits, loss, sample_id, final_context_state)
       return logits, loss, final_context_state, sample_id
 
   def model_fn(self):
@@ -194,6 +208,27 @@ class SequenceToSequence(ModelInterface):
     return self.decoder.decode(mode, encoder_outputs, encoder_state,
                                labels, src_seq_len)
 
+  def _lifecycle_before_encode(self, mode, features):
+    if self.lifecycle_hooks:
+      for hook in self.lifecycle_hooks:
+        hook.before_encode(mode, features)
+
+  def _lifecycle_after_encode(self, mode, features, outputs, state):
+    if self.lifecycle_hooks:
+      for hook in self.lifecycle_hooks:
+        hook.after_encode(mode, features, outputs, state)
+
+  def _lifecycle_before_decode(self, mode, outputs, state, labels, src_seq_len):
+    if self.lifecycle_hooks:
+      for hook in self.lifecycle_hooks:
+        hook.before_decode(mode, outputs, state, labels, src_seq_len)
+
+  def _lifecycle_after_decode(self, mode, logits, loss, sample_id,
+                              final_context_state):
+    if self.lifecycle_hooks:
+      for hook in self.lifecycle_hooks:
+        hook.after_decode(mode, logits, loss, sample_id, final_context_state)
+
   @staticmethod
   def _compute_loss(logits, params, labels):
     target_output = labels.target_output_ids
@@ -224,14 +259,25 @@ class SequenceToSequence(ModelInterface):
       loss,
       trainable_params,
       colocate_gradients_with_ops=params.colocate_gradients_with_ops)
-    clipped_grads, grad_norm_summary, grad_norm = self._clip_gradients(
+    clipped_grads, grad_norm = self._clip_gradients(
       gradients, params.max_gradient_norm)
     update = opt.apply_gradients(
       zip(clipped_grads, trainable_params), global_step=global_steps)
-    tf.summary.merge([tf.summary.scalar("lr", lr),
-                      tf.summary.scalar("train_loss", loss)
-                      ] + grad_norm_summary)
+    # tf.summary.merge([tf.summary.scalar("lr", lr),
+    #                   tf.summary.scalar("train_loss", loss)
+    #                   ] + grad_norm_summary)
+    self._listen_tensors(global_steps, lr, gradients, clipped_grads, grad_norm)
     return update
+
+  def _listen_tensors(self, global_steps, learning_rate,
+                      gradients, clipped_grads, grad_norm):
+    if self.tensors_hooks:
+      for hook in self.tensors_hooks:
+        hook.on_global_steps_created(global_steps)
+        hook.on_learning_rate_created(learning_rate)
+        hook.on_gradients_created(gradients)
+        hook.on_clipped_grads_created(clipped_grads)
+        hook.on_grad_norm_created(grad_norm)
 
   def _warmup_lr(self, lr, global_steps, params):
     warmup_steps = params.warmup_steps
@@ -293,11 +339,12 @@ class SequenceToSequence(ModelInterface):
   def _clip_gradients(self, gradients, max_gradient_norm):
     clipped_gradients, gradient_norm = (
       tf.clip_by_global_norm(gradients, max_gradient_norm))
-    gradient_norm_summary = [
-      tf.summary.scalar("grad_norm", gradient_norm),
-      tf.summary.scalar("clipped_gradient", tf.global_norm(clipped_gradients))]
-    return clipped_gradients, gradient_norm_summary, gradient_norm
+    # gradient_norm_summary = [
+    #   tf.summary.scalar("grad_norm", gradient_norm),
+    #   tf.summary.scalar("clipped_gradient", tf.global_norm(clipped_gradients))]
+    return clipped_gradients, gradient_norm
 
+  # TODO(luozhouyang) add metric ops
   def _eval_metric_ops(self, features, labels, predictions):
     return None
 
