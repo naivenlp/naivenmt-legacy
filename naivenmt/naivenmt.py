@@ -1,14 +1,16 @@
 import abc
 import argparse
-import sys
-import os
 import codecs
+import os
+import sys
 
 import tensorflow as tf
 from tensorflow.python.estimator.util import fn_args
 
-from naivenmt.configs import add_arguments
 from naivenmt.configs import Hparams
+from naivenmt.configs import add_arguments
+from naivenmt.hooks import TensorSummaryHook
+from naivenmt.hooks import TensorsCollectionHook
 from naivenmt.models import BasicModel, AttentionModel, GNMTModel
 
 
@@ -58,15 +60,23 @@ class NaiveNMT(NaiveNMTInterface):
       params=self.hparams)
 
   def _create_model(self):
+    lifecycle_hooks = []
+    tensors_hooks = [TensorSummaryHook(), TensorsCollectionHook()]
     if not self.hparams.attention:
       return BasicModel(params=self.hparams,
-                        predict_file=self.hparams.inference_input_file)
+                        predict_file=self.hparams.inference_input_file,
+                        lifecycle_hooks=lifecycle_hooks,
+                        tensors_hooks=tensors_hooks)
     if self.hparams.attention_architecture == "standard":
       return AttentionModel(params=self.hparams,
-                            predict_file=self.hparams.inference_input_file)
+                            predict_file=self.hparams.inference_input_file,
+                            lifecycle_hooks=lifecycle_hooks,
+                            tensors_hooks=tensors_hooks)
     if self.hparams.attention_architecture in ["gnmt", "gnmt_v2"]:
       return GNMTModel(params=self.hparams,
-                       predict_file=self.hparams.inference_input_file)
+                       predict_file=self.hparams.inference_input_file,
+                       lifecycle_hooks=lifecycle_hooks,
+                       tensors_hooks=tensors_hooks)
     raise ValueError("Can not create model.")
 
   def train(self):
