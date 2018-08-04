@@ -15,6 +15,9 @@
 
 
 def add_arguments(parser):
+  # Implementation is mostly copied from tensorflow/nmt/nmt.py, changed all args
+  # whose type is `"bool"` to `bool`
+
   parser.register("type", "bool", lambda v: v.lower() == "true")
 
   # network
