@@ -109,7 +109,7 @@ class Hparams(object):
       # Files
       src=self.flags.src,
       tgt=self.flags.tgt,
-      train_prefix=self.flags.train_flags,
+      train_prefix=self.flags.train_prefix,
       dev_prefix=self.flags.dev_prefix,
       test_prefix=self.flags.test_prefix,
       vocab_prefix=self.flags.vocab_prefix,
@@ -197,7 +197,7 @@ class Hparams(object):
       metrics=metrics,
       log_device_placement=self.flags.log_device_placement,
       random_seed=self.flags.random_seed,
-      override_loaded_params=self.flags.override_loaded_params,
+      override_loaded_params=self.flags.override_loaded_hparams,
       num_keep_ckpts=self.flags.num_keep_ckpts,
       avg_ckpts=self.flags.avg_ckpts,
       num_intra_threads=self.flags.num_intra_threads,
