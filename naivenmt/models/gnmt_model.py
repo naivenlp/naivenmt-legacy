@@ -1,8 +1,8 @@
-from naivenmt.decoders import GNMTDecoder
-from naivenmt.embeddings import Embedding
-from naivenmt.encoders import GNMTEncoder
-from naivenmt.inputters import Inputter
-from naivenmt.models import SequenceToSequence
+from naivenmt.decoders.gnmt_decoder import GNMTDecoder
+from naivenmt.embeddings.embedding import Embedding
+from naivenmt.encoders.gnmt_encoder import GNMTEncoder
+from naivenmt.inputters.inputter import Inputter
+from naivenmt.models.sequence_to_sequence import SequenceToSequence
 
 
 class GNMTModel(SequenceToSequence):

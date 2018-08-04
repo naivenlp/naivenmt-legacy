@@ -3,8 +3,8 @@ import abc
 import tensorflow as tf
 from tensorflow.python.ops import lookup_ops
 
-from naivenmt.inputters import DefaultInferIteratorHookCreator
-from naivenmt.inputters import DefaultIteratorHooksCreator
+from naivenmt.inputters.iterator_hooks import DefaultInferIteratorHookCreator
+from naivenmt.inputters.iterator_hooks import DefaultIteratorHooksCreator
 
 
 class InputterInterface(abc.ABC):

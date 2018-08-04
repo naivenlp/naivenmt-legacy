@@ -45,7 +45,7 @@ class AbstractEncoder(EncoderInterface):
     self.num_encoder_layers = params.num_encoder_layers
     self.num_encoder_residual_layers = params.num_encoder_residual_layers
     self.encoder_type = params.encoder_type
-    self.time_major = params.tima_major
+    self.time_major = params.time_major
     self.unit_type = params.unit_type
     self.num_units = params.num_units
     self.forget_bias = params.forget_bias

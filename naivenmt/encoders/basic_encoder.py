@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from naivenmt.encoders import AbstractEncoder
+from naivenmt.encoders.abstract_encoder import AbstractEncoder
 
 
 class BasicEncoder(AbstractEncoder):

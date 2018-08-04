@@ -1,8 +1,8 @@
-from naivenmt.decoders import BasicDecoder
-from naivenmt.embeddings import Embedding
-from naivenmt.encoders import BasicEncoder
-from naivenmt.inputters import Inputter
-from naivenmt.models import SequenceToSequence
+from naivenmt.decoders.basic_decoder import BasicDecoder
+from naivenmt.embeddings.embedding import Embedding
+from naivenmt.encoders.basic_encoder import BasicEncoder
+from naivenmt.inputters.inputter import Inputter
+from naivenmt.models.sequence_to_sequence import SequenceToSequence
 
 
 class BasicModel(SequenceToSequence):

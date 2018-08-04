@@ -1,5 +1,6 @@
-from naivenmt.hooks import ModelTensorsHook
 import tensorflow as tf
+
+from naivenmt.hooks.model_tensors_hooks import ModelTensorsHook
 
 
 class TensorsCollectionHook(ModelTensorsHook):

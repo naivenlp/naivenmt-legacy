@@ -2,7 +2,8 @@ import abc
 
 import tensorflow as tf
 
-from naivenmt.inputters import Features, Labels
+from naivenmt.inputters.features import Features
+from naivenmt.inputters.labels import Labels
 
 
 class ModelInterface(abc.ABC):
