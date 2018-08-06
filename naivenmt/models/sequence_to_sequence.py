@@ -174,17 +174,22 @@ class SequenceToSequence(ModelInterface):
       features: features, instance of ``naivenmt.inputters.Features``
       labels: labels, instance of ``naivenmt.inputters.Labels``
     """
-    iterator = self.inputter.iterator(mode)
-    tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS, iterator.initializer)
-    src_ids, tgt_input_ids, tgt_output_ids, src_len, tgt_len = (
-      iterator.get_next())
-    features = Features(source_ids=src_ids,
-                        source_sequence_length=src_len)
-    labels = Labels(target_input_ids=tgt_input_ids,
-                    target_output_ids=tgt_output_ids,
-                    target_sequence_length=tgt_len)
-    # TODO(luozhouyang) use lambda?
-    return features, labels
+
+    def _input_fn():
+      iterator = self.inputter.iterator(mode)
+      tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS,
+                           iterator.initializer)
+      src_ids, tgt_input_ids, tgt_output_ids, src_len, tgt_len = (
+        iterator.get_next())
+      features = Features(source_ids=src_ids,
+                          source_sequence_length=src_len)
+      labels = Labels(target_input_ids=tgt_input_ids,
+                      target_output_ids=tgt_output_ids,
+                      target_sequence_length=tgt_len)
+      # TODO(luozhouyang) use lambda?
+      return (features, labels)
+
+    return _input_fn
 
   def serving_input_fn(self):
     return lambda: self._serving_input_fn()
