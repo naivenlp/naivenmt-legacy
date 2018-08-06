@@ -36,7 +36,7 @@ class BasicDecoder(AbstractDecoder):
                      scope=scope,
                      dtype=dtype)
 
-    assert params.attention is None
+    # assert params.attention is None
 
     self.unit_type = params.unit_type
     self.num_units = params.num_units
