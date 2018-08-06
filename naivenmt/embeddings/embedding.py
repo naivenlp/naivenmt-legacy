@@ -64,9 +64,9 @@ class Embedding(EmbeddingInterface):
   def __init__(self,
                src_vocab_size,
                tgt_vocab_size,
-               share_vocab,
                src_embedding_size,
                tgt_embedding_size,
+               share_vocab=False,
                num_partitions=0,
                dtype=None,
                src_vocab_file=None,
@@ -162,17 +162,17 @@ class Embedding(EmbeddingInterface):
                                    dtype=tf.float32,
                                    scope="pretrained_embedding"):
     vocab, _ = self._load_vocab(vocab_file)
-    trainable_tokens = vocab_file[:num_trainable_tokens]
+    trainable_tokens = vocab[:num_trainable_tokens]
     embedding_dict, embedding_size = self._load_embedding_txt(embedding_file)
     for token in trainable_tokens:
-      if token in embedding_dict:
+      if token not in embedding_dict:
         embedding_dict[token] = [0.0] * embedding_size
     embedding_matrix = np.array(
       [embedding_dict[token] for token in vocab], dtype=dtype.as_numpy_dtype)
     embedding_matrix = tf.constant(embedding_matrix)
     embedding_matrix_const = tf.slice(
       embedding_matrix, [num_trainable_tokens, 0], [-1, -1])
-    with tf.variable_scope(scope, dtype=dtype):
+    with tf.variable_scope(scope, dtype=dtype, reuse=tf.AUTO_REUSE):
       embedding_matrix_variable = tf.get_variable(
         "embedding_matrix_variable",
         [num_trainable_tokens, embedding_size])
