@@ -124,10 +124,12 @@ class Inputter(InputterInterface):
     self._eval_iterator = None
     self._predict_file = predict_file
     self._predict_iterator = None
-    self._source_vocab_table = None
-    self._source_reverse_vocab_table = None
-    self._target_vocab_table = None
-    self._target_reverse_vocab_table = None
+    self._source_vocab_table = self._create_vocab_table(self.source_vocab_file)
+    self._source_reverse_vocab_table = self._create_reverse_vocab_table(
+      self.source_vocab_file)
+    self._target_vocab_table = self._create_vocab_table(self.target_vocab_file)
+    self._target_reverse_vocab_table = self._create_reverse_vocab_table(
+      self.target_vocab_file)
 
     self.iterator_hook = iterator_hook
     self.infer_iterator_hook = infer_iterator_hook
@@ -201,11 +203,11 @@ class Inputter(InputterInterface):
     if not output_buffer_size:
       output_buffer_size = batch_size * 1000
     src_eos_id = tf.cast(
-      src_vocab_table.lookup(tf.constant(tf.constant(eos))), tf.int32)
+      src_vocab_table.lookup(tf.constant(eos)), tf.int32)
     tgt_sos_id = tf.cast(
-      tgt_vocab_table.lookup(tf.constant(tf.constant(sos))), tf.int32)
+      tgt_vocab_table.lookup(tf.constant(sos)), tf.int32)
     tgt_eos_id = tf.cast(
-      tgt_vocab_table.lookup(tf.constant(tf.constant(eos))), tf.int32)
+      tgt_vocab_table.lookup(tf.constant(eos)), tf.int32)
 
     src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
     src_tgt_dataset = src_tgt_dataset.shard(num_shards, shard_index)
@@ -244,7 +246,7 @@ class Inputter(InputterInterface):
     src_tgt_dataset = src_tgt_dataset.map(
       lambda src, tgt: (src,
                         tf.concat(([tgt_sos_id], tgt), 0),
-                        tf.concat((tgt, tgt_eos_id), 0)),
+                        tf.concat((tgt, [tgt_eos_id]), 0)),
       num_parallel_calls=num_parallel_calls).prefetch(output_buffer_size)
 
     # Add sequences' length
