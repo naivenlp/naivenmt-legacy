@@ -13,17 +13,19 @@
 # limitations under the License.
 # ==============================================================================
 
-from .collection_hooks import TensorsCollectionHook
-from .lifecycle_hooks import ModelLifecycleHook, LifecycleLoggingHook
-from .model_tensors_hooks import ModelTensorsHook
-from .params_hooks import CountParamsHook
-from .summary_hooks import TensorSummaryHook
-from .ckpt_log_listener import CkptLoggingListener
+import tensorflow as tf
 
-__all__ = ["CountParamsHook",
-           "ModelTensorsHook",
-           "ModelLifecycleHook",
-           "LifecycleLoggingHook",
-           "TensorsCollectionHook",
-           "TensorSummaryHook",
-           "CkptLoggingListener"]
+
+class CkptLoggingListener(tf.train.CheckpointSaverListener):
+
+  def begin(self):
+    tf.logging.info("Begin to save checkpoints...")
+
+  def before_save(self, session, global_step_value):
+    tf.logging.info("Save checkpoint at step %d." % global_step_value)
+
+  def after_save(self, session, global_step_value):
+    tf.logging.info("Saved checkpoint at step %d." % global_step_value)
+
+  def end(self, session, global_step_value):
+    tf.logging.info("Finished to save checkpoint.")

@@ -15,6 +15,8 @@
 
 import abc
 
+import tensorflow as tf
+
 
 class ModelLifecycleHook(abc.ABC):
   """Listeners to listen model's lifecycle.
@@ -70,3 +72,24 @@ class ModelLifecycleHook(abc.ABC):
       final_context_state: state of decoder.
     """
     raise NotImplementedError()
+
+
+class LifecycleLoggingHook(ModelLifecycleHook):
+
+  def before_encode(self, mode, features):
+    tf.logging.info("Model in mode %s is about to encoding inputs: %s."
+                    % (mode, features.source_ids))
+
+  def after_encode(self, mode, features, outputs, state):
+    tf.logging.info("Decoder outputs: %s" % outputs)
+    tf.logging.info("Decoder state  : %s" % state)
+
+  def before_decode(self, mode, outputs, state, labels, src_seq_len):
+    tf.logging.info("Model in mode %s is about to decoding.")
+    tf.logging.info("Target inputs : %s" % labels.target_input_ids)
+    tf.logging.info("Target outputs: %s" % labels.target_output_ids)
+
+  def after_decode(self, mode, logits, loss, sample_id, final_context_state):
+    tf.logging.info("Model decode loss     : %s" % logits)
+    tf.logging.info("Model decode sample id: %s" % sample_id)
+    tf.logging.info("Model decode state    : %s" % final_context_state)
