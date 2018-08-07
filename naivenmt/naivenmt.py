@@ -22,11 +22,13 @@ import sys
 import tensorflow as tf
 from tensorflow.python.estimator.util import fn_args
 
-from naivenmt.configs import Hparams
-from naivenmt.configs import add_arguments
+from naivenmt.configs.hparams import Hparams
+from naivenmt.configs.arguments import add_arguments
 from naivenmt.hooks import TensorSummaryHook
 from naivenmt.hooks import TensorsCollectionHook
 from naivenmt.models import BasicModel, AttentionModel, GNMTModel
+from naivenmt.hooks import CkptLoggingListener
+from naivenmt.hooks import LifecycleLoggingHook
 
 
 class NaiveNMTInterface(abc.ABC):
@@ -75,8 +77,8 @@ class NaiveNMT(NaiveNMTInterface):
       params=self.hparams)
 
   def _create_model(self):
-    lifecycle_hooks = []
-    tensors_hooks = [TensorSummaryHook(), TensorsCollectionHook()]
+    lifecycle_hooks = [LifecycleLoggingHook()]
+    tensors_hooks = [TensorSummaryHook(), TensorsCollectionHook(), ]
     if not self.hparams.attention:
       return BasicModel(params=self.hparams,
                         predict_file=self.hparams.inference_input_file,
@@ -96,7 +98,16 @@ class NaiveNMT(NaiveNMTInterface):
 
   def train(self):
     # TODO(luozhouyang) add hooks
-    train_hooks = []
+    train_hooks = [tf.train.StepCounterHook(every_n_steps=100,
+                                            output_dir=self.hparams.out_dir),
+                   tf.train.CheckpointSaverHook(
+                     save_steps=100,
+                     checkpoint_dir=self.hparams.out_dir,
+                     listeners=[CkptLoggingListener()]),
+                   tf.train.NanTensorHook(tf.get_collection("loss")),
+                   # tf.train.SummarySaverHook(save_steps=100,
+                   #                           output_dir=self.hparams.out_dir)
+                   ]
     train_spec = tf.estimator.TrainSpec(
       input_fn=self.model.input_fn(tf.estimator.ModeKeys.TRAIN),
       max_steps=self.hparams.num_train_steps,
