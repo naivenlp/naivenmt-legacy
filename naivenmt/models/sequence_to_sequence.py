@@ -179,15 +179,20 @@ class SequenceToSequence(ModelInterface):
       iterator = self.inputter.iterator(mode)
       tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS,
                            iterator.initializer)
-      src_ids, tgt_input_ids, tgt_output_ids, src_len, tgt_len = (
-        iterator.get_next())
-      features = Features(source_ids=src_ids,
-                          source_sequence_length=src_len)
-      labels = Labels(target_input_ids=tgt_input_ids,
-                      target_output_ids=tgt_output_ids,
-                      target_sequence_length=tgt_len)
-      # TODO(luozhouyang) use lambda?
-      return (features, labels)
+      if mode != tf.estimator.ModeKeys.PREDICT:
+        src_ids, tgt_input_ids, tgt_output_ids, src_len, tgt_len = (
+          iterator.get_next())
+        features = Features(source_ids=src_ids,
+                            source_sequence_length=src_len)
+        labels = Labels(target_input_ids=tgt_input_ids,
+                        target_output_ids=tgt_output_ids,
+                        target_sequence_length=tgt_len)
+        return features, labels
+      else:
+        src_ids, src_len = iterator.get_next()
+        features = Features(source_ids=src_ids,
+                            source_sequence_length=src_len)
+        return features
 
     return _input_fn
 
