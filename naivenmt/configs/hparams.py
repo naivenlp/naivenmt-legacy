@@ -14,8 +14,11 @@
 # ==============================================================================
 
 import codecs
+import json
 import os
+import random
 
+import numpy as np
 import tensorflow as tf
 
 UNK = "<unk>"
@@ -31,6 +34,130 @@ class Hparams(object):
 
   def build(self):
     flags = self.flags
+
+    jobid = flags.jobid
+    tf.logging.info("Job id: %d" % jobid)
+
+    random_seed = flags.random_seed
+    if random_seed is not None and random_seed > 0:
+      tf.logging.info("Set random_seed to %d" % random_seed)
+      random.seed(random_seed + jobid)
+      np.random.seed(random_seed + jobid)
+
+    out_dir = flags.out_dir
+    if not tf.gfile.Exists(out_dir):
+      tf.gfile.MakeDirs(out_dir)
+
+    hparams = self._load_or_create_hparams(
+      out_dir, flags, flags.hparams_path, save_hparams=(jobid == 0))
+    return hparams
+
+  def _load_or_create_hparams(self, out_dir, flags, hparams_path,
+                              save_hparams=True):
+    """Load hparams if exist, or create it.
+
+    Args:
+      out_dir: output dir
+      flags: all flags from arguments
+      hparams_path: standard hparams file
+      save_hparams: save hparams to file or not
+
+    Returns:
+      Hparams
+    """
+    loaded_hparams = self._load_hparams(out_dir)
+    default_hparams = self._create_hparams(flags, hparams_path)
+    if loaded_hparams:
+      hparams = self._merge_hparams(
+        flags.override_loaded_hparams, default_hparams, loaded_hparams)
+    else:
+      hparams = default_hparams
+
+    if save_hparams:
+      self._save_hparams(out_dir, hparams)
+      for metric in hparams.metrics:
+        path = getattr(hparams, "best_" + metric + "_dir")
+        self._save_hparams(path, hparams)
+
+    return hparams
+
+  @staticmethod
+  def _merge_hparams(override, hparams, loaded_hparams):
+    """Merge hparams. Add missing hparams terms to loaded hparams and override
+        loaded hparams by default hparams.
+
+    Args:
+      override: override loaded hparams or not
+      hparams: default hparams created from arguments
+      loaded_hparams: hparams loaded from file
+
+    Returns:
+      Merged hparams.
+    """
+    if not override:
+      return loaded_hparams
+
+    configs = hparams.values()
+    loaded_configs = loaded_hparams.values()
+    for key in configs:
+      if key not in loaded_configs:
+        loaded_hparams.add_hparam(key, configs[key])
+        tf.logging.info("Add hparam %s" % configs[key])
+      else:
+        setattr(loaded_hparams, key, configs[key])
+        tf.logging.info("Replace hparam %s : %s -> %s" % (
+          key, configs[key], loaded_configs[key]))
+    return loaded_hparams
+
+  @staticmethod
+  def _load_hparams(out_dir):
+    """Load hparams from output dir.
+
+    Returns:
+      Hparams or None
+    """
+    hparams_file = os.path.join(out_dir, "hparams")
+    if not tf.gfile.Exists(hparams_file):
+      return None
+    tf.logging.info("Load hparams from %s." % hparams_file)
+    with codecs.getreader("utf8")(tf.gfile.GFile(hparams_file, "rb")) as f:
+      try:
+        hparams_values = json.load(f)
+        hparams = tf.contrib.training.HParams(**hparams_values)
+      except ValueError:
+        tf.logging.error("Can't load hparams file.")
+        return None
+      return hparams
+
+  @staticmethod
+  def _save_hparams(path, hparams):
+    """Save hparams to out_dir and metrics dir."""
+    hparams_file = os.path.join(path, "hparams")
+    tf.logging.info("Saving hparams to %s" % hparams_file)
+    with codecs.getwriter("utf8")(tf.gfile.GFile(hparams_file, "wb")) as f:
+      f.write(hparams.to_json())
+
+  @staticmethod
+  def _merge_flags(flags, hparams_path):
+    if not hparams_path:
+      return flags
+
+    if not tf.gfile.Exists(hparams_path):
+      tf.logging.info("Hparams path %s does not exist." % hparams_path)
+      return flags
+
+    with tf.gfile.GFile(hparams_path, "r") as f:
+      configs = json.load(f)
+      for k, v in configs:
+        if hasattr(flags, k):
+          if isinstance(v, list):
+            v = ",".join(v)
+          setattr(flags, k, v)
+      return flags
+
+  def _create_hparams(self, flags, hparams_path):
+
+    flags = self._merge_flags(flags, hparams_path)
 
     if flags.subword_option and flags.subword_option not in ["spm", "bpe"]:
       raise ValueError("subword option must be either spm, or bpe")
@@ -216,6 +343,7 @@ class Hparams(object):
       override_loaded_params=self.flags.override_loaded_hparams,
       num_keep_ckpts=self.flags.num_keep_ckpts,
       avg_ckpts=self.flags.avg_ckpts,
+      num_workers=self.flags.num_workers,
       num_intra_threads=self.flags.num_intra_threads,
       num_inter_threads=self.flags.num_inter_threads)
 

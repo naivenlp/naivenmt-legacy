@@ -25,7 +25,7 @@ TEST_DATA_DIR = os.path.abspath(os.path.join(os.pardir, "../", "testdata"))
 
 
 def add_required_params(flags):
-  flags.out_dir = "/tmp/model"
+  flags.out_dir = "D:\\tmp\\model"
   flags.src = "en"
   flags.tgt = "vi"
   flags.train_prefix = os.path.join(TEST_DATA_DIR, "iwslt15.tst2013.100")
@@ -51,6 +51,8 @@ class TestHParams(tf.test.TestCase):
 
     # For convenience, print hparams
     print(hparams)
+
+    self.assertTrue(os.path.exists(os.path.join(hparams.out_dir, "hparams")))
 
 
 if __name__ == "__main__":
