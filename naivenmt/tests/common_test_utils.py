@@ -22,3 +22,13 @@ def get_testdata_dir():
 
 def get_testdata_file(filename):
   return os.path.join(get_testdata_dir(), filename)
+
+
+def add_required_params(flags):
+  flags.out_dir = "/tmp/model"
+  flags.src = "en"
+  flags.tgt = "vi"
+  flags.train_prefix = os.path.join(get_testdata_dir(), "iwslt15.tst2013.100")
+  flags.dev_prefix = os.path.join(get_testdata_dir(), "iwslt15.tst2013.100")
+  flags.test_prefix = os.path.join(get_testdata_dir(), "iwslt15.tst2013.100")
+  flags.vocab_prefix = os.path.join(get_testdata_dir(), "iwslt15.vocab.100")
