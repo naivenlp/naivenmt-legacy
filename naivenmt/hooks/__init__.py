@@ -13,18 +13,16 @@
 # limitations under the License.
 # ==============================================================================
 
-from .collection_hooks import TensorsCollectionHook
+from .ckpt_log_listener import CkptLoggingListener
+from .eval_hooks import SaveEvaluationPredictionsHook
 from .lifecycle_hooks import ModelLifecycleHook, LifecycleLoggingHook
 from .model_tensors_hooks import ModelTensorsHook
 from .params_hooks import CountParamsHook
 from .summary_hooks import TensorSummaryHook
-from .ckpt_log_listener import CkptLoggingListener
-from .eval_hooks import SaveEvaluationPredictionsHook
 
 __all__ = ["CountParamsHook",
            "ModelTensorsHook",
            "ModelLifecycleHook",
            "LifecycleLoggingHook",
-           "TensorsCollectionHook",
            "TensorSummaryHook",
            "CkptLoggingListener"]

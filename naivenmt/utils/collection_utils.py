@@ -17,9 +17,25 @@
 import tensorflow as tf
 
 
-def add_dict_to_collection(name, tensor):
-  tf.add_to_collection(name, tensor)
+def add_dict_to_collection(name, tensors_dict):
+  keys = name + "_keys"
+  values = name + "_values"
+  for k, v in tensors_dict:
+    tf.add_to_collection(keys, k)
+    tf.add_to_collection(values, v)
 
 
 def get_dict_from_collection(name):
+  keys = name + "_keys"
+  values = name + "_values"
+  keys = tf.get_collection(keys)
+  values = tf.get_collection(values)
+  return dict(zip(keys, values))
+
+
+def add_to_collection(name, tensor):
+  tf.add_to_collection(name, tensor)
+
+
+def get_from_collection(name):
   return tf.get_collection(name)

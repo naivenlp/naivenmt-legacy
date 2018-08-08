@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from naivenmt.inputters.features import Features
 from naivenmt.inputters.labels import Labels
-from naivenmt.utils import add_dict_to_collection
+from naivenmt.utils import add_dict_to_collection, add_to_collection
 
 
 class ModelInterface(abc.ABC):
@@ -135,6 +135,7 @@ class SequenceToSequence(ModelInterface):
 
   def model_fn(self):
     """Create model fn for estimator."""
+
     def _model_fn(features, labels, params, mode, config):
       logits, loss, _, sample_id = self._build(
         features, labels, params, mode, config)
@@ -282,7 +283,7 @@ class SequenceToSequence(ModelInterface):
     return loss
 
   def _train_op(self, loss, params):
-    global_steps = tf.Variable(0, trainable=False)
+    global_steps = tf.train.get_or_create_global_step()
     lr = tf.constant(params.learning_rate)
     lr = self._warmup_lr(lr, global_steps, params)
     lr = self._decay_lr(lr, global_steps, params)
@@ -302,8 +303,21 @@ class SequenceToSequence(ModelInterface):
     self._listen_tensors(global_steps, lr, gradients, clipped_grads, grad_norm)
     return update
 
-  def _listen_tensors(self, global_steps, learning_rate,
-                      gradients, clipped_grads, grad_norm):
+  def _listen_tensors(self,
+                      global_steps,
+                      learning_rate,
+                      gradients,
+                      clipped_grads,
+                      grad_norm):
+    """Listen tensors creation and add tensors to tf collections for hooking.
+
+    Args:
+      global_steps: global steps
+      learning_rate: learning rate
+      gradients: gradients
+      clipped_grads: clipped gradients
+      grad_norm: grad_norm
+    """
     if self.tensors_hooks:
       for hook in self.tensors_hooks:
         hook.on_global_steps_created(global_steps)
@@ -312,6 +326,12 @@ class SequenceToSequence(ModelInterface):
         hook.on_clipped_grads_created(clipped_grads)
         hook.on_grad_norm_created(grad_norm)
         hook.end()
+
+    # Do not need to add global_steps, cause it has been added to collection
+    add_to_collection("learning_rate", learning_rate)
+    add_to_collection("gradients", gradients)
+    add_to_collection("clipped_grads", clipped_grads)
+    add_to_collection("grad_norm", grad_norm)
 
   def _warmup_lr(self, lr, global_steps, params):
     warmup_steps = params.warmup_steps

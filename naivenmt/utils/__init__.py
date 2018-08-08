@@ -14,6 +14,7 @@
 # ==============================================================================
 
 from .collection_utils import add_dict_to_collection
+from .collection_utils import add_to_collection
 from .collection_utils import get_dict_from_collection
 from .text_utils import format_bpe_text
 from .text_utils import format_spm_text
