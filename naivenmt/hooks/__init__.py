@@ -19,6 +19,7 @@ from .model_tensors_hooks import ModelTensorsHook
 from .params_hooks import CountParamsHook
 from .summary_hooks import TensorSummaryHook
 from .ckpt_log_listener import CkptLoggingListener
+from .eval_hooks import SaveEvaluationPredictionsHook
 
 __all__ = ["CountParamsHook",
            "ModelTensorsHook",
