@@ -19,6 +19,7 @@ import tensorflow as tf
 
 from naivenmt.inputters.features import Features
 from naivenmt.inputters.labels import Labels
+from naivenmt.utils import add_dict_to_collection
 
 
 class ModelInterface(abc.ABC):
@@ -133,12 +134,15 @@ class SequenceToSequence(ModelInterface):
       return logits, loss, final_context_state, sample_id
 
   def model_fn(self):
+    """Create model fn for estimator."""
     def _model_fn(features, labels, params, mode, config):
       logits, loss, _, sample_id = self._build(
         features, labels, params, mode, config)
       predictions = None
       if mode != tf.estimator.ModeKeys.TRAIN:
         predictions = self._decode_predictions(sample_id, params.time_major)
+        # Add predictions tensors to tf collection for hooking.
+        add_dict_to_collection("predictions", predictions)
       if mode == tf.estimator.ModeKeys.TRAIN:
         train_op = self._train_op(loss, params)
         return tf.estimator.EstimatorSpec(
@@ -154,6 +158,9 @@ class SequenceToSequence(ModelInterface):
       elif mode == tf.estimator.ModeKeys.PREDICT:
         export_outputs = {}
         k = tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
+        # predictions is a tensor or a dict of tensors.
+        # gRPC clients can get the result from serving and then parse
+        # the tensors result to text.
         export_outputs[k] = tf.estimator.export.PredictOutput(predictions)
         return tf.estimator.EstimatorSpec(
           mode=mode,
@@ -383,7 +390,12 @@ class SequenceToSequence(ModelInterface):
       sample_words = sample_words.transpose()
     elif sample_words.ndim == 3:
       sample_words = sample_words.transpose([2, 0, 1])
-    return sample_words
+
+    prediction_tensors_dict = {
+      # "ids": sample_id,
+      "words": sample_words
+    }
+    return prediction_tensors_dict
 
   def _initializer(self, mode, params):
     """Variables initializer. Only train mode need a initializer.
