@@ -16,11 +16,11 @@
 import collections
 
 
-def get_predictions(outputs, tgt_eos, subword_option):
+def get_predictions(predictions, tgt_eos, subword_option):
   """Decode the models' output tensor to text.
 
   Args:
-    outputs: predictions['words'] tensor of the model.
+    predictions: predictions, instance
     tgt_eos: target sentence's eod-of-sentence symbol.
     subword_option: subword option
 
@@ -31,7 +31,8 @@ def get_predictions(outputs, tgt_eos, subword_option):
     tgt_eos = tgt_eos.encode("utf8")
 
   # Select first sentence
-  output = outputs[0, :].to_list()
+  output = predictions["words"]
+  output = output[0, :].to_list()
 
   if tgt_eos and tgt_eos in output:
     output = output[:output.index(tgt_eos)]

@@ -61,8 +61,7 @@ class SaveEvaluationPredictionsHook(tf.train.SessionRunHook):
                 run_values):
     predictions, self.global_steps = run_values.results
     self.output_file = self.output_file + "." + self.global_steps
-    predictions = get_predictions(
-      predictions["words"], self.eos, self.subword_option)
+    predictions = get_predictions(predictions, self.eos, self.subword_option)
 
     with open(self.output_file, mode="a", encoding="utf8") as f:
       if isinstance(predictions, str):
