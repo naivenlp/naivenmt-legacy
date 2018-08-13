@@ -18,11 +18,11 @@ from .eval_hooks import SaveEvaluationPredictionsHook
 from .lifecycle_hooks import ModelLifecycleHook, LifecycleLoggingHook
 from .model_tensors_hooks import ModelTensorsHook
 from .params_hooks import CountParamsHook
-from .summary_hooks import TensorSummaryHook
+from .summary_hooks import TrainTensorsSummaryHook
 
 __all__ = ["CountParamsHook",
            "ModelTensorsHook",
            "ModelLifecycleHook",
            "LifecycleLoggingHook",
-           "TensorSummaryHook",
+           "TrainTensorsSummaryHook",
            "CkptLoggingListener"]

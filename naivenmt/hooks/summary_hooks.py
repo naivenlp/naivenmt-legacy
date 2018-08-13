@@ -18,7 +18,7 @@ import tensorflow as tf
 from naivenmt.hooks.model_tensors_hooks import ModelTensorsHook
 
 
-class TensorSummaryHook(ModelTensorsHook):
+class TrainTensorsSummaryHook(ModelTensorsHook):
   """Summary tensors."""
 
   def __init__(self):
@@ -51,5 +51,5 @@ class TensorSummaryHook(ModelTensorsHook):
     for k, v in self.summaries.items():
       summary = tf.summary.scalar(k, v)
       summaries.append(summary)
-    tf.summary.merge(summaries)
+    tf.summary.merge(summaries, name="train_summary")
     tf.logging.info("Tensors summaries are merged.")
