@@ -104,6 +104,8 @@ class Hparams(object):
         loaded_hparams.add_hparam(key, configs[key])
         tf.logging.info("Add hparam %s" % configs[key])
       else:
+        if loaded_configs[key] == configs[key]:
+          continue
         loaded_hparams.set_hparam(key, configs[key])
         tf.logging.info("Replace hparam %s : %s -> %s" % (
           key, configs[key], loaded_configs[key]))
