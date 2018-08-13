@@ -22,13 +22,13 @@ import sys
 import tensorflow as tf
 from tensorflow.python.estimator.util import fn_args
 
-from naivenmt.configs.hparams import Hparams
 from naivenmt.configs.arguments import add_arguments
-from naivenmt.hooks import TensorSummaryHook
-from naivenmt.hooks import TensorsCollectionHook
-from naivenmt.models import BasicModel, AttentionModel, GNMTModel
+from naivenmt.configs.hparams import Hparams
 from naivenmt.hooks import CkptLoggingListener
 from naivenmt.hooks import LifecycleLoggingHook
+from naivenmt.hooks import SaveEvaluationPredictionsHook
+from naivenmt.hooks import TrainTensorsSummaryHook
+from naivenmt.models import BasicModel, AttentionModel, GNMTModel
 
 
 class NaiveNMTInterface(abc.ABC):
@@ -50,35 +50,52 @@ class NaiveNMTInterface(abc.ABC):
     raise NotImplementedError()
 
 
-class NaiveNMT(NaiveNMTInterface):
+class AbstractNaiveNMT(NaiveNMTInterface):
 
   def __init__(self, hparams):
     self.hparams = hparams
     self.model = self._create_model()
     self.estimator = self._create_estimator()
 
+  @abc.abstractmethod
+  def _create_train_hooks(self):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def _create_eval_hooks(self):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def _create_predict_hooks(self):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def _create_run_config(self):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def _create_session_config(self):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def _create_model_lifecycle_hooks(self):
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def _create_model_tensors_hooks(self):
+    raise NotImplementedError()
+
   def _create_estimator(self):
-    sess_config = tf.ConfigProto(
-      allow_soft_placement=True,
-      log_device_placement=False,
-      gpu_options=tf.GPUOptions(
-        allow_growth=False))
-
     # TODO(luozhouyang) set configs to sess in models
-    run_configs = tf.estimator.RunConfig(
-      model_dir=self.hparams.out_dir,
-      session_config=sess_config,
-      tf_random_seed=self.hparams.random_seed)
-
     return tf.estimator.Estimator(
       model_fn=self.model.model_fn(),
       model_dir=self.hparams.out_dir,
-      config=run_configs,
+      config=self._create_run_config(),
       params=self.hparams)
 
   def _create_model(self):
-    lifecycle_hooks = [LifecycleLoggingHook()]
-    tensors_hooks = [TensorSummaryHook(), TensorsCollectionHook(), ]
+    lifecycle_hooks = self._create_model_lifecycle_hooks()
+    tensors_hooks = self._create_model_tensors_hooks()
     if not self.hparams.attention:
       return BasicModel(params=self.hparams,
                         predict_file=self.hparams.inference_input_file,
@@ -97,34 +114,17 @@ class NaiveNMT(NaiveNMTInterface):
     raise ValueError("Can not create model.")
 
   def train(self):
-    # TODO(luozhouyang) add hooks
-    train_hooks = [tf.train.StepCounterHook(every_n_steps=100,
-                                            output_dir=self.hparams.out_dir),
-                   tf.train.CheckpointSaverHook(
-                     save_steps=100,
-                     checkpoint_dir=self.hparams.out_dir,
-                     listeners=[CkptLoggingListener()]),
-                   tf.train.NanTensorHook(tf.get_collection("loss")),
-                   # tf.train.SummarySaverHook(save_steps=100,
-                   #                           output_dir=self.hparams.out_dir)
-                   ]
-    train_spec = tf.estimator.TrainSpec(
-      input_fn=self.model.input_fn(tf.estimator.ModeKeys.TRAIN),
-      max_steps=self.hparams.num_train_steps,
-      hooks=train_hooks)
-
     self.estimator.train(
-      input_fn=train_spec.input_fn,
-      hooks=train_spec.hooks,
-      max_steps=train_spec.max_steps)
+      input_fn=self.model.input_fn(tf.estimator.ModeKeys.TRAIN),
+      hooks=self._create_train_hooks(),
+      max_steps=self.hparams.num_train_steps)
     # TODO(luozhouyang) average ckpts
 
   def eval(self):
-    # TODO(luozhouyang) add hooks and set checkpoint_path
-    eval_hooks = []
+    # TODO(luozhouyang) add option to set checkpoint_path
     self.estimator.evaluate(
       input_fn=self.model.input_fn(tf.estimator.ModeKeys.EVAL),
-      hooks=eval_hooks,
+      hooks=self._create_eval_hooks(),
       checkpoint_path=None)
 
   def predict(self):
@@ -136,12 +136,10 @@ class NaiveNMT(NaiveNMTInterface):
       infer_output_file = os.path.join(self.hparams.out_dir, "infer_output.txt")
     # TODO(luozhouyang) add option to set ckpt
     checkpoint_path = tf.train.latest_checkpoint(self.hparams.out_dir)
-    # TODO(luozhouyang) add infer hooks
-    infer_hooks = []
     predictions = self.estimator.predict(
       input_fn=self.model.input_fn(tf.estimator.ModeKeys.PREDICT),
       checkpoint_path=checkpoint_path,
-      hooks=infer_hooks)
+      hooks=self._create_predict_hooks())
 
     with codecs.getwriter("utf-8")(
             tf.gfile.GFile(infer_output_file, mode="wb")) as fout:
@@ -167,6 +165,53 @@ class NaiveNMT(NaiveNMTInterface):
       serving_input_receiver_fn=self.model.serving_input_fn(),
       checkpoint_path=checkpoint_path,
       **kwargs)
+
+
+class NaiveNMT(AbstractNaiveNMT):
+
+  def _create_run_config(self):
+    config = tf.estimator.RunConfig(
+      model_dir=self.hparams.out_dir,
+      session_config=self._create_session_config(),
+      tf_random_seed=self.hparams.random_seed,
+      save_summary_steps=100,
+      save_checkpoints_steps=5000,
+      save_checkpoints_secs=None,
+      keep_checkpoint_max=10,
+      log_step_count_steps=500)
+    return config
+
+  def _create_session_config(self):
+    return tf.ConfigProto(
+      allow_soft_placement=True,
+      log_device_placement=False,
+      gpu_options=tf.GPUOptions(allow_growth=False))
+
+  def _create_model_lifecycle_hooks(self):
+    return [LifecycleLoggingHook()]
+
+  def _create_model_tensors_hooks(self):
+    return [TrainTensorsSummaryHook()]
+
+  def _create_train_hooks(self):
+    step_count_hook = tf.train.StepCounterHook(
+      every_n_steps=100, output_dir=self.hparams.out_dir)
+    ckpt_saver_hook = tf.train.CheckpointSaverHook(
+      save_steps=self.hparams,
+      checkpoint_dir=self.hparams.out_dir,
+      listeners=[CkptLoggingListener()])
+    loss_nan_hook = tf.train.NanTensorHook(
+      loss_tensor=tf.get_collection("loss"))
+    train_hooks = [step_count_hook, ckpt_saver_hook, loss_nan_hook, ]
+    return train_hooks
+
+  def _create_eval_hooks(self):
+    save_eval_predictions_hook = SaveEvaluationPredictionsHook(
+      out_dir=self.hparams.out_dir)
+    return [save_eval_predictions_hook]
+
+  def _create_predict_hooks(self):
+    return None
 
 
 def main(unused_args):
