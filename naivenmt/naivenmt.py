@@ -29,6 +29,7 @@ from naivenmt.hooks import LifecycleLoggingHook
 from naivenmt.hooks import SaveEvaluationPredictionsHook
 from naivenmt.hooks import TrainTensorsSummaryHook
 from naivenmt.models import BasicModel, AttentionModel, GNMTModel
+from naivenmt.utils import average_ckpts
 
 
 class NaiveNMTInterface(abc.ABC):
@@ -86,7 +87,6 @@ class AbstractNaiveNMT(NaiveNMTInterface):
     raise NotImplementedError()
 
   def _create_estimator(self):
-    # TODO(luozhouyang) set configs to sess in models
     return tf.estimator.Estimator(
       model_fn=self.model.model_fn(),
       model_dir=self.hparams.out_dir,
@@ -118,10 +118,11 @@ class AbstractNaiveNMT(NaiveNMTInterface):
       input_fn=self.model.input_fn(tf.estimator.ModeKeys.TRAIN),
       hooks=self._create_train_hooks(),
       max_steps=self.hparams.num_train_steps)
-    # TODO(luozhouyang) average ckpts
+    if self.hparams.avg_ckpts:
+      average_ckpts(self.hparams.out_dir, self.hparams.num_keep_ckpts,
+                    self._create_session_config())
 
   def eval(self):
-    # TODO(luozhouyang) add option to set checkpoint_path
     self.estimator.evaluate(
       input_fn=self.model.input_fn(tf.estimator.ModeKeys.EVAL),
       hooks=self._create_eval_hooks(),
@@ -134,8 +135,9 @@ class AbstractNaiveNMT(NaiveNMTInterface):
     infer_output_file = self.hparams.inference_output_file
     if not infer_output_file:
       infer_output_file = os.path.join(self.hparams.out_dir, "infer_output.txt")
-    # TODO(luozhouyang) add option to set ckpt
-    checkpoint_path = tf.train.latest_checkpoint(self.hparams.out_dir)
+    checkpoint_path = self.hparams.ckpt
+    if not checkpoint_path:
+      checkpoint_path = tf.train.latest_checkpoint(self.hparams.out_dir)
     predictions = self.estimator.predict(
       input_fn=self.model.input_fn(tf.estimator.ModeKeys.PREDICT),
       checkpoint_path=checkpoint_path,
@@ -147,9 +149,12 @@ class AbstractNaiveNMT(NaiveNMTInterface):
         fout.write((prediction + b'\n').decode("utf-8"))
 
   def export(self):
-    # TODO(luozhouyang) add option to set ckpt
-    checkpoint_path = tf.train.latest_checkpoint(self.hparams.out_dir)
+    # Use flags.ckpt to create ckpt for exporting
+    checkpoint_path = self.hparams.ckpt
+    if not checkpoint_path:
+      checkpoint_path = tf.train.latest_checkpoint(self.hparams.out_dir)
 
+    # TODO(luozhouyang) add an option to set export dir
     export_dir = os.path.join(self.estimator.model_dir, "export")
     if not os.path.isdir(export_dir):
       os.makedirs(export_dir)

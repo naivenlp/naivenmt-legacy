@@ -20,3 +20,4 @@ from .text_utils import format_bpe_text
 from .text_utils import format_spm_text
 from .text_utils import format_text
 from .text_utils import get_predictions
+from .ckpt_utils import average_ckpts
