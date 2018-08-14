@@ -25,13 +25,11 @@ class AttentionModel(SequenceToSequence):
 
   def __init__(self,
                params,
-               predict_file=None,
                scope=None,
                dtype=None,
                lifecycle_hooks=None,
                tensors_hooks=None):
-    inputter = Inputter(params=params,
-                        predict_file=predict_file)
+    inputter = Inputter(params=params)
     embedding = Embedding(src_vocab_size=params.source_vocab_size,
                           tgt_vocab_size=params.target_vocab_size,
                           share_vocab=params.share_vocab,
