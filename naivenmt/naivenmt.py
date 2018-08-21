@@ -98,17 +98,14 @@ class AbstractNaiveNMT(NaiveNMTInterface):
     tensors_hooks = self._create_model_tensors_hooks()
     if not self.hparams.attention:
       return BasicModel(params=self.hparams,
-                        predict_file=self.hparams.inference_input_file,
                         lifecycle_hooks=lifecycle_hooks,
                         tensors_hooks=tensors_hooks)
     if self.hparams.attention_architecture == "standard":
       return AttentionModel(params=self.hparams,
-                            predict_file=self.hparams.inference_input_file,
                             lifecycle_hooks=lifecycle_hooks,
                             tensors_hooks=tensors_hooks)
     if self.hparams.attention_architecture in ["gnmt", "gnmt_v2"]:
       return GNMTModel(params=self.hparams,
-                       predict_file=self.hparams.inference_input_file,
                        lifecycle_hooks=lifecycle_hooks,
                        tensors_hooks=tensors_hooks)
     raise ValueError("Can not create model.")
@@ -129,9 +126,10 @@ class AbstractNaiveNMT(NaiveNMTInterface):
       checkpoint_path=None)
 
   def predict(self):
-    infer_input_file = self.hparams.inference_input_file
-    if not infer_input_file:
-      raise ValueError("Inference input file must be provided.")
+    # inference_input_file is processed in ``Inputter``.
+    # infer_input_file = self.hparams.inference_input_file
+    # if not infer_input_file:
+    #   raise ValueError("Inference input file must be provided.")
     infer_output_file = self.hparams.inference_output_file
     if not infer_output_file:
       infer_output_file = os.path.join(self.hparams.out_dir, "infer_output.txt")

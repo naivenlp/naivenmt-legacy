@@ -14,6 +14,8 @@
 # ==============================================================================
 
 import abc
+import codecs
+import os
 
 import tensorflow as tf
 from tensorflow.python.ops import lookup_ops
@@ -84,18 +86,17 @@ class InputterInterface(abc.ABC):
     raise NotImplementedError()
 
 
+# TODO(luozhouyang) infer file indexes
 class Inputter(InputterInterface):
 
   def __init__(self,
                params,
-               predict_file=None,
                iterator_hook=DefaultIteratorHooksCreator(),
                infer_iterator_hook=DefaultInferIteratorHookCreator()):
     """Inputter for models.
 
     Args:
       params: hparams
-      predict_file: file to do predict
       iterator_hook: train and eval iterator's hook. Must be an instance of
         `naivenmt.inputters.IteratorHooksCreator` or its subclass.
       infer_iterator_hook: infer iterator's hook. Must be an instance of
@@ -122,8 +123,11 @@ class Inputter(InputterInterface):
 
     self._train_iterator = None
     self._eval_iterator = None
-    self._predict_file = predict_file
     self._predict_iterator = None
+
+    self.iterator_hook = iterator_hook
+    self.infer_iterator_hook = infer_iterator_hook
+
     self._source_vocab_table = self._create_vocab_table(self.source_vocab_file)
     self._source_reverse_vocab_table = self._create_reverse_vocab_table(
       self.source_vocab_file)
@@ -131,8 +135,9 @@ class Inputter(InputterInterface):
     self._target_reverse_vocab_table = self._create_reverse_vocab_table(
       self.target_vocab_file)
 
-    self.iterator_hook = iterator_hook
-    self.infer_iterator_hook = infer_iterator_hook
+    self._out_dir = params.out_dir
+    self._predict_file = params.inference_input_file
+    self._predict_indices = params.inference_indices
 
   def iterator(self, mode):
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -275,6 +280,7 @@ class Inputter(InputterInterface):
     if not self._predict_file:
       raise TypeError("Inference file is NoneType.")
 
+    self._predict_file = self._process_predict_file()
     src_dataset = tf.data.TextLineDataset(self._predict_file)
     return self._make_infer_iterator(
       src_dataset=src_dataset,
@@ -282,6 +288,23 @@ class Inputter(InputterInterface):
       batch_size=self.infer_batch_size,
       eos=self.eos,
       src_max_len=self.source_sequence_length)
+
+  def _process_predict_file(self):
+    with codecs.getreader("utf-8")(
+            tf.gfile.GFile(self._predict_file, mode="rb")) as f:
+      inference_data = f.read().splitlines()
+
+    if self._predict_indices:
+      inference_data = [inference_data[i] for i in self._predict_indices]
+
+    # Create a new predict file
+    new_predict_file = os.path.join(
+      self._out_dir, os.path.basename(self._predict_file))
+    with codecs.getwriter("utf-8")(
+            tf.gfile.GFile(new_predict_file, "wb")) as f:
+      for line in inference_data:
+        f.write(line.strip("\n") + "\n")
+    return new_predict_file
 
   def _make_infer_iterator(self,
                            src_dataset,

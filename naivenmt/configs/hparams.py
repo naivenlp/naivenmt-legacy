@@ -250,6 +250,10 @@ class Hparams(object):
 
     metrics = flags.metrics.split(",")
 
+    inference_indices = None
+    if flags.inference_list:
+      inference_indices = [int(idx) for idx in flags.inference_list.split(",")]
+
     hparams = tf.contrib.training.HParams(
       # Files
       src=self.flags.src,
@@ -281,6 +285,7 @@ class Hparams(object):
       inference_output_file=flags.inference_output_file,
       inference_list=flags.inference_list,
       inference_ref_file=flags.inference_ref_file,
+      inference_indices=inference_indices,
 
       # Network
       num_units=self.flags.num_units,
