@@ -17,7 +17,7 @@ import numpy as np
 import tensorflow as tf
 
 
-# This fucntion is modified from https://github.com/Kyubyong/transformer/blob/master/modules.py
+# This function is modified from https://github.com/Kyubyong/transformer/blob/master/modules.py
 #  with Apache License V2
 def positional_encoding(inputs,
                         num_units,
@@ -25,9 +25,12 @@ def positional_encoding(inputs,
   """Positional encoding as described in https://arxiv.org/abs/1706.03762.
 
   Args:
-    inputs: A 2-d tensor with shape [N, T]
-    num_units: Output dimension, or the model's dimension
+    inputs: A 2-d tensor with shape [B, L]. B->Batch size, L->Time steps
+    num_units: The model's dimension
     scope: Variable scope
+
+  Returns:
+    A tensor with shape [B,L,D]. D->Model's dimension
   """
   batch_size, time_steps = inputs.get_shape().as_list()
   with tf.variable_scope(scope):
@@ -49,28 +52,46 @@ def positional_encoding(inputs,
     return outputs
 
 
-def norm(inputs):
-  return tf.layers.batch_normalization(inputs=inputs)
+def layer_norm(inputs, epsilon=1e-8, scope="layer_norm"):
+  """Layer normalization.
 
+    norm = gamma * (inputs - mean) / sqrt(variance + epsilon)
 
-def add_and_norm(x, sub_x, dropout=0.2):
-  with tf.variable_scope("add_and_norm"):
-    sub_x = tf.nn.dropout(sub_x, 1 - dropout)
-    return tf.layers.batch_normalization(inputs=x + sub_x)
+  Args:
+    inputs: Input tensor, shape is [B,L,D]. B->Batch size, L->Time steps, D->Model's dim
+    epsilon: A very small float number to avoid zero division error
+    scope: Variable scope or name
+
+  Returns:
+    The normalized tensor with shape [B,L,D]
+  """
+  with tf.variable_scope(scope):
+    inputs_shape = inputs.get_shape()
+    params_shape = inputs_shape[-1:]
+
+    mean, variance = tf.nn.moments(inputs, [-1], keep_dims=True)
+    beta = tf.Variable(tf.zeros(params_shape))
+    gamma = tf.Variable(tf.ones(params_shape))
+    normalized = (inputs - mean) / ((variance + epsilon) ** .5)
+    outputs = gamma * normalized + beta
+  return outputs
 
 
 def scaled_dot_product_attention(q, k, v, scale=None, mask=None, dropout=0.2):
   """Scaled dot-product attention.
 
   Args:
-    q: Query tensor, with shape [B, L_q, D]
-    k: Key tensor, with shape [N, L_k, D]
-    v: Value tensor, with shape [N, L_v, D]
-    scale: A scalar, scale factor
-    mask: Attention mask, with shape [B, L, L]
+    q: Query tensor, with shape [h*B, L, D/h]. h->num_heads
+    k: Key tensor, with shape [h*B, L, D/h]
+    v: Value tensor, with shape [h*B, L, D/h]
+    scale: A scalar, scale factor, sqrt(D)
+    mask: Attention mask, with shape [h*B, L, L]
     dropout: A scalar, dropout rate
+
+  Returns:
+    An output tensor and a attention tensor
   """
-  dot = tf.matmul(q, k, transpose_b=True)
+  dot = tf.matmul(q, k, transpose_b=True)  # [h*B,L,L]
   if scale:
     dot = dot * scale
   if mask:
@@ -92,13 +113,16 @@ def multihead_attention(queries,
   """Multi-head attention mechanism.
 
   Args:
-    queries: Query tensor, with shape [B, L_q, D]
-    keys: Key tensor, with shape [B, L_k, D]
-    values: Value tensor, with shape [B, L_v, D]
+    queries: Query tensor, with shape [h*B, L, D/h]. h->num_heads
+    keys: Key tensor, with shape [h*B, L, D/h]
+    values: Value tensor, with shape [h*B, L, D/h]
     num_heads: A scalar, number of heads to split
     dropout: A scalar, dropout rate.
-    mask: Making tensor, with shape [B, L_q, L_k]
+    mask: Making tensor, with shape [B, L, L]
     scope: A string, variable scope name.
+
+  Returns:
+    An output tensor and a attention tensor
   """
   with tf.variable_scope(scope) as scope:
     model_dim = queries.get_shape()[-1]
@@ -126,7 +150,7 @@ def multihead_attention(queries,
     # residual
     output += queries
     # layer norm
-    output = norm(output)
+    output = layer_norm(output)
 
     return output, attention
 
@@ -136,6 +160,18 @@ def positional_wise_feed_forward_network(inputs,
                                          ffn_dim=2048,
                                          dropout=0.2,
                                          scope="ffn"):
+  """Positional-wise feed forward network.
+
+  Args:
+    inputs: Input tensor with shape [B,L,D]
+    model_dim: Model's dimension
+    ffn_dim: FFN's inner dimension
+    dropout: A scalar, dropout rate
+    scope: Variable's scope or name
+
+  Returns:
+    An output tensor with shape [B,L,D]
+  """
   with tf.variable_scope(scope) as scope:
     params = {"inputs": inputs, "filters": model_dim, "kernel_size": 1,
               "activation": tf.nn.relu, "use_bias": True}
@@ -150,6 +186,42 @@ def positional_wise_feed_forward_network(inputs,
 
     # residual and layer norm
     outputs += inputs
-    outputs = norm(outputs)
+    outputs = layer_norm(outputs)
 
     return outputs
+
+
+def padding_mask(seq_k, seq_q, num_heads):
+  """Padding mask.
+
+  Args:
+    seq_k: Keys tensor with shape [B,L,D]
+    seq_q: Queries tensor with shape [B,L,D]
+    num_heads: A scalar, number of heads
+
+  Returns:
+    A masking tensor with shape [B,L,L]
+  """
+  mask = tf.sign(tf.abs(tf.reduce_sum(seq_k, axis=-1)))  # [B,L]
+  mask = tf.tile(mask, [num_heads, 1])  # [h*B,L]
+  mask = tf.tile(tf.expand_dims(mask, 1), [1, tf.shape(seq_q)[1], 1])  # [B,L,L]
+  return mask
+
+
+def sequence_mask(seq, num_heads, dtype=tf.float32):
+  """Sequence mask to blind feature time steps.
+
+  Args:
+    seq: Input tensor with shape [B,L,D]
+    num_heads: A scalar, number of heads
+    dtype: Data type
+
+  Returns:
+    A maksing tensor with shape [h*B,L,L]
+  """
+  batch_size = tf.shape(seq)[0]
+  length = tf.shape(seq)[1]
+  diag = tf.ones(shape=[length, length], dtype=dtype)  # [L,L]
+  tril = tf.linalg.LinearOperatorLowerTriangular(diag).to_dense()  # [L,L]
+  mask = tf.tile(tf.expand_dims(tril, 0), [num_heads * batch_size, 1, 1])  # [h*B,L,L]
+  return mask
