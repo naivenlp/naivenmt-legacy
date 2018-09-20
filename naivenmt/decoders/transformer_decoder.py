@@ -13,16 +13,16 @@ class TransformerDecoder(DecoderInterface):
                num_heads=8,
                ffn_dim=2948,
                dropout=0.2,
-               dtype=tf.float32,
-               scope="decoder"):
+               dtype=None,
+               scope=None):
     self.embedding = embedding
     self.num_layers = num_layers
     self.model_dim = model_dim
     self.num_heads = num_heads
     self.ffn_dim = ffn_dim
     self.dropout = dropout
-    self.dtype = dtype
-    self.scope = scope
+    self.dtype = dtype or tf.float32
+    self.scope = scope or "decoder"
 
   def decode(self, mode, encoder_outputs, encoder_state, labels, src_seq_len):
     self.dropout = self.dropout if mode == tf.estimator.ModeKeys.TRAIN else 0.0
