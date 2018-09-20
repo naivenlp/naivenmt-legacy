@@ -18,5 +18,7 @@ from .abstract_decoder import DecoderInterface
 from .attention_decoder import AttentionDecoder
 from .basic_decoder import BasicDecoder
 from .gnmt_decoder import GNMTDecoder
+from .transformer_decoder import TransformerDecoder
 
-__all__ = ["AbstractDecoder", "BasicDecoder", "AttentionDecoder", "GNMTDecoder", "DecoderInterface"]
+__all__ = ["AbstractDecoder", "BasicDecoder", "AttentionDecoder", "GNMTDecoder", "DecoderInterface",
+           "TransformerDecoder"]

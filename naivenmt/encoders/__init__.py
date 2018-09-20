@@ -17,5 +17,6 @@ from .abstract_encoder import AbstractEncoder
 from .abstract_encoder import EncoderInterface
 from .basic_encoder import BasicEncoder
 from .gnmt_encoder import GNMTEncoder
+from .transformer_encoder import TransformerEncoder
 
-__all__ = ["AbstractEncoder", "BasicEncoder", "GNMTEncoder", "EncoderInterface"]
+__all__ = ["AbstractEncoder", "BasicEncoder", "GNMTEncoder", "EncoderInterface", "TransformerEncoder"]
