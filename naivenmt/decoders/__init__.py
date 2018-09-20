@@ -14,8 +14,9 @@
 # ==============================================================================
 
 from .abstract_decoder import AbstractDecoder
+from .abstract_decoder import DecoderInterface
 from .attention_decoder import AttentionDecoder
 from .basic_decoder import BasicDecoder
 from .gnmt_decoder import GNMTDecoder
 
-__all__ = ["AbstractDecoder", "BasicDecoder", "AttentionDecoder", "GNMTDecoder"]
+__all__ = ["AbstractDecoder", "BasicDecoder", "AttentionDecoder", "GNMTDecoder", "DecoderInterface"]
