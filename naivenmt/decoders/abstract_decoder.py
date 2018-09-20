@@ -85,7 +85,7 @@ class AbstractDecoder(DecoderInterface):
 
       if mode != tf.estimator.ModeKeys.PREDICT:
         helper = tf.contrib.seq2seq.TrainingHelper(
-          self.embedding.decoder_embedding_input(labels),
+          self.embedding.decoder_embedding_input(labels.target_input_ids),
           tgt_seq_len,
           time_major=self.time_major)
         decoder = tf.contrib.seq2seq.BasicDecoder(
