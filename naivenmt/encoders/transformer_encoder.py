@@ -29,10 +29,14 @@ class TransformerEncoder(EncoderInterface):
     # max_sequence_length = max(self.max_seq_len, features.source_sequence_length)
 
     with tf.variable_scope(self.scope, dtype=self.dtype) as scope:
-      encoder_embedding_input = self.embedding.encoder_embedding_input(features.source_ids)
-      encoder_embedding_input += transformer.positional_encoding(encoder_embedding_input, self.model_dim)
+      encoder_embedding_input = self.embedding.encoder_embedding_input(
+        features.source_ids)
+      encoder_embedding_input += transformer.positional_encoding(
+        encoder_embedding_input, self.model_dim)
 
-      self_attention_mask = transformer.padding_mask(features.source_ids, features.source_ids, self.num_heads)
+      self_attention_mask = transformer.padding_mask(
+        features.source_ids, features.source_ids, self.num_heads)
+
       attentions = []
       output = encoder_embedding_input
       for i in range(self.num_layers):
@@ -41,7 +45,10 @@ class TransformerEncoder(EncoderInterface):
     return output, attentions
 
   def encoder_layer(self, inputs, attention_mask):
-    output, attention = transformer.multihead_attention(inputs, inputs, inputs, self.num_heads, self.dropout,
-                                                        attention_mask)
-    output = transformer.positional_wise_feed_forward_network(output, self.model_dim, self.ffn_dim, self.dropout)
+    output, attention = transformer.multihead_attention(
+      inputs, inputs, inputs, self.num_heads, self.dropout, attention_mask)
+
+    output = transformer.positional_wise_feed_forward_network(
+      output, self.model_dim, self.ffn_dim, self.dropout)
+
     return output, attention
