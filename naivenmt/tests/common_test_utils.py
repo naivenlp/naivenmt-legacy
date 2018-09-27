@@ -27,6 +27,17 @@ def get_testdata_file(filename):
   return os.path.join(get_testdata_dir(), filename)
 
 
+def get_module_dir(dirname):
+  """Get dir path of module under naivenmt."""
+  return os.path.abspath(os.path.join(os.pardir, dirname))
+
+
+def get_file_path(module, file):
+  """Get file's abs path."""
+  naivenmt_dir = os.path.pardir
+  return os.path.abspath(os.path.join(naivenmt_dir, module, file))
+
+
 def add_required_params(flags):
   flags.out_dir = "/tmp/model"
   flags.src = "en"
@@ -43,3 +54,17 @@ def setup_flags():
   flags, _ = parser.parse_known_args()
   add_required_params(flags)
   return flags
+
+
+def set_test_files_hparams(builder):
+  params = dict()
+  params['source_train_file'] = get_testdata_file('iwslt15.tst2013.100.en')
+  params['target_train_file'] = get_testdata_file('iwslt15.tst2013.100.vi')
+  params['source_dev_file'] = get_testdata_file('iwslt15.tst2013.100.en')
+  params['target_dev_file'] = get_testdata_file('iwslt15.tst2013.100.vi')
+  params['source_test_file'] = get_testdata_file('iwslt15.tst2013.100.en')
+  params['target_test_file'] = get_testdata_file('iwslt15.tst2013.100.vi')
+  params['source_vocab_file'] = get_testdata_file('iwslt15.vocab.100.en')
+  params['target_vocab_file'] = get_testdata_file('iwslt15.vocab.100.vi')
+  builder.add_dict(**params)
+  return builder

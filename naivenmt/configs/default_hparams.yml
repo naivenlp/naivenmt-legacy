@@ -1,0 +1,121 @@
+# Default configs. For more details, read tensorflow/nmt 's documents.
+
+# data
+# abs path
+source_train_file: E:\GitProjects\naivenmt\testdata\iwslt15.tst2013.100.en
+target_train_file: E:\GitProjects\naivenmt\testdata\iwslt15.tst2013.100.vi
+# DO NOT use the train file as dev or test file!
+source_dev_file: E:\GitProjects\naivenmt\testdata\iwslt15.tst2013.100.en
+target_dev_file: E:\GitProjects\naivenmt\testdata\iwslt15.tst2013.100.vi
+source_test_file: E:\GitProjects\naivenmt\testdata\iwslt15.tst2013.100.en
+target_test_file: E:\GitProjects\naivenmt\testdata\iwslt15.tst2013.100.vi
+source_vocab_file: E:\GitProjects\naivenmt\testdata\iwslt15.vocab.100.en
+target_vocab_file: E:\GitProjects\naivenmt\testdata\iwslt15.vocab.100.vi
+source_embedding_file:
+target_embedding_file:
+inference_input_file:
+inference_output_file:
+inference_ref_file:
+inference_list:
+inference_indices:
+
+check_special_token: True
+# one of ['','bpe','spm']
+subword_option: ''
+
+out_dir: D:\tmp\model
+sos: <s>
+eos: </s>
+# limit the size of training data. 0 is no limit
+max_train: 0
+num_buckets: 5
+
+
+# train
+src_max_len: 50
+tgt_max_len: 50
+# train batch size
+batch_size: 64
+# train steps
+num_train_steps: 1000000
+# ['uniform','glorot_normal','glorot_uniform']
+init_op: 'uniform'
+# init weights for `uniform` init op
+init_weight: 0.1
+# grad norm
+max_gradient_norm: 5.0
+# onr of ['sgd','adam']
+optimizer: sgd
+# if `optimizer` is 'adam`, set lr to 0.001|0.0001
+learning_rate: 1.0
+warmup_steps: 0
+warmup_scheme: t2t
+colocate_gradients_with_ops: True
+# one of ['','luong234','luong5','luong10']
+decay_scheme: ''
+steps_per_stats: 100
+steps_per_external_eval:
+
+
+# infer
+src_max_len_infer: 50
+tgt_max_len_infer: 50
+infer_batch_size: 128
+# ckpt path for inference
+ckpt:
+# beam width for beam search decoder
+beam_width: 10
+sampling_temperature: 0.0
+# num decoder results per input
+num_translations_per_input: 1
+
+
+# networks
+num_units: 256
+num_layers: 4
+num_encoder_layers: 2
+num_decoder_layers: 2
+residual: true
+num_encoder_residual_layers: 1
+num_decoder_residual_layers: 1
+# one of ['lstm','gru','layer_norm_lstm','nas']
+unit_type: lstm
+dropout: 0.2
+# one of ['uni','bi','gnmt']. For `bi`, `num_encoder_layers` should be even
+encoder_type: gnmt
+# if `True`, shape is [T,B,D] else [B,T,D]
+time_major: true
+num_embeddings_partitions: 1
+# should be the same as `num_units`
+source_embedding_size: 256
+# should be the same as `num_units`
+target_embedding_size: 256
+
+
+# attention
+# one of ['luong','bahdanau','scaled_luong','normed_bahdanau']
+attention: normed_bahdanau
+# one of ['standard','gnmt','gnmt_v2']
+attention_architecture: gnmt_v2
+output_attention: true
+# pass encoder's state to init decoder
+pass_hidden_state: true
+
+
+# misc
+length_penalty_weight: 1.0
+forget_bias: 1.0
+num_gpus: 1
+epoch_step: 0
+share_vocab: false
+metrics: ['blue']
+log_device_placement: false
+random_seed:
+# not used in our project but in tensorflow/nmt
+override_loaded_params: false
+num_keep_ckpts: 5
+avg_ckpts: true
+num_intra_threads: 0
+num_inter_threads: 0
+num_workers: 1
+jobid: 0

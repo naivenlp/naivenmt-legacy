@@ -1,16 +1,25 @@
 import tensorflow as tf
-from naivenmt.tests import setup_flags
+import yaml
+
+from naivenmt.configs import HParamsBuilder
 from naivenmt.naivenmt import NaiveNMT
-from naivenmt.configs import Hparams
+from naivenmt.tests import common_test_utils as utils
 
 
 class TestNaiveNMT(tf.test.TestCase):
 
-  def setUp(self):
-    self.flags = setup_flags()
-
   def testNaiveNMTTrain(self):
-    nmt = NaiveNMT(Hparams(self.flags).build())
+    builder = HParamsBuilder()
+    with open(utils.get_file_path('configs', 'default_hparams.yml'),
+              encoding='utf8') as f:
+      config = yaml.load(f)
+    builder.add_dict(**config)
+    utils.set_test_files_hparams(builder)
+    hparams = builder.build()
+
+    print(hparams.out_dir)
+    print(hparams.num_train_steps)
+    nmt = NaiveNMT(hparams)
     nmt.train()
 
 
