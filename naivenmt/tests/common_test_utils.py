@@ -13,7 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 
+import argparse
 import os
+
+from naivenmt.configs import add_arguments
 
 
 def get_testdata_dir():
@@ -32,3 +35,11 @@ def add_required_params(flags):
   flags.dev_prefix = os.path.join(get_testdata_dir(), "iwslt15.tst2013.100")
   flags.test_prefix = os.path.join(get_testdata_dir(), "iwslt15.tst2013.100")
   flags.vocab_prefix = os.path.join(get_testdata_dir(), "iwslt15.vocab.100")
+
+
+def setup_flags():
+  parser = argparse.ArgumentParser()
+  add_arguments(parser)
+  flags, _ = parser.parse_known_args()
+  add_required_params(flags)
+  return flags
