@@ -24,19 +24,17 @@ class BasicDecoder(AbstractDecoder):
   def __init__(self,
                params,
                embedding,
-               sos,
-               eos,
-               scope=None,
-               dtype=None,
-               single_cell_fn=None):
-    super().__init__(params=params,
-                     embedding=embedding,
-                     sos=sos,
-                     eos=eos,
-                     scope=scope,
-                     dtype=dtype)
-
-    # assert params.attention is None
+               sos_id,
+               eos_id,
+               scope="basic_decoder",
+               dtype=tf.float32):
+    super(AbstractDecoder, self).__init__(
+      params=params,
+      embedding=embedding,
+      sos_id=sos_id,
+      eos_id=eos_id,
+      scope=scope,
+      dtype=dtype)
 
     self.unit_type = params.unit_type
     self.num_units = params.num_units
@@ -44,80 +42,54 @@ class BasicDecoder(AbstractDecoder):
     self.num_decoder_residual_layers = params.num_decoder_residual_layers
     self.forget_bias = params.forget_bias
     self.dropout = params.dropout
-    self.num_gpus = params.num_gpus
     self.beam_width = params.beam_width
-
-    self.single_cell_fn = single_cell_fn
-    if not self.single_cell_fn:
-      self.single_cell_fn = self._single_cell_fn
+    self.infer_mode = params.infer_mode
 
   def _build_decoder_cell(self,
                           mode,
                           encoder_outputs,
                           encoder_state,
-                          sequence_length):
-    cell = self._create_rnn_cell(mode)
-    if mode == tf.estimator.ModeKeys.PREDICT:
+                          source_sequence_length):
+    cells = self._create_rnn_cell(mode)
+    if (mode == tf.estimator.ModeKeys.PREDICT and
+        self.infer_mode == "beam_search"):
       decoder_initial_state = tf.contrib.seq2seq.tile_batch(
         encoder_state, multiplier=self.beam_width)
     else:
       decoder_initial_state = encoder_state
-    return cell, decoder_initial_state
+    return cells, decoder_initial_state
 
-  def _create_rnn_cell(self, mode):
-    cell_list = self._cell_list(
-      self.unit_type,
-      self.num_units,
-      self.num_decoder_layers,
-      self.num_decoder_residual_layers,
-      self.forget_bias,
-      self.dropout,
-      mode=mode,
-      num_gpus=self.num_gpus,
-      single_cell_fn=self.single_cell_fn)
-    if len(cell_list) == 1:
-      return cell_list[0]
-    else:
-      return tf.contrib.rnn.MultiRNNCell(cell_list)
-
-  def _cell_list(self,
-                 unit_type,
-                 num_units,
-                 num_layers,
-                 num_residual_layers,
-                 forget_bias,
-                 dropout,
-                 mode,
-                 num_gpus,
-                 base_gpu=0,
-                 single_cell_fn=None,
-                 residual_fn=None):
+  def _create_rnn_cell(self, mode, residual_fn=None):
     cells = []
-    assert single_cell_fn
-    for i in range(num_layers):
-      residual_conn = (i >= num_layers - num_residual_layers)
-      device_str = self._get_device_str(i + base_gpu, num_gpus)
-      single_cell = single_cell_fn(
-        unit_type, num_units, forget_bias, dropout, mode, residual_conn,
-        device_str, residual_fn)
-      cells.append(single_cell)
-    return cells
+    for i in range(self.num_decoder_layers):
+      res = (i >= self.num_decoder_layers - self.num_decoder_residual_layers)
+      cell = self._build_single_cell(
+        unit_type=self.unit_type,
+        num_units=self.num_units,
+        forget_bias=self.forget_bias,
+        dropout=self.dropout,
+        mode=mode,
+        residual_connection=res,
+        residual_fn=residual_fn)
+      cells.append(cell)
+    cells = cells[0] if len(cells) == 1 else cells
+    return tf.contrib.rnn.MultiRNNCell(cells)
 
   @staticmethod
-  def _single_cell_fn(unit_type,
-                      num_units,
-                      forget_bias,
-                      dropout, mode,
-                      residual_connection=False,
-                      device_str=None,
-                      residual_fn=None):
+  def _build_single_cell(unit_type,
+                         num_units,
+                         forget_bias,
+                         dropout,
+                         mode,
+                         residual_connection=False,
+                         residual_fn=None):
     dropout = dropout if mode == tf.estimator.ModeKeys.TRAIN else 0.0
 
     if unit_type == "lstm":
-      single_cell = tf.contrib.rnn.BasicLSTMCell(
+      single_cell = tf.nn.rnn_cell.BasicLSTMCell(
         num_units, forget_bias=forget_bias)
     elif unit_type == "gru":
-      single_cell = tf.contrib.rnn.GRUCell(num_units)
+      single_cell = tf.nn.rnn_cell.GRUCell(num_units)
     elif unit_type == "layer_norm_lstm":
       single_cell = tf.contrib.rnn.LayerNormBasicLSTMCell(
         num_units, forget_bias=forget_bias, layer_norm=True)
@@ -132,8 +104,4 @@ class BasicDecoder(AbstractDecoder):
     if residual_connection:
       single_cell = tf.contrib.rnn.ResidualWrapper(
         single_cell, residual_fn=residual_fn)
-
-    if device_str:
-      single_cell = tf.contrib.rnn.DeviceWrapper(
-        single_cell, device_str)
     return single_cell

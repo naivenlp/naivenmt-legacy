@@ -25,25 +25,17 @@ class GNMTDecoder(AttentionDecoder):
   def __init__(self,
                params,
                embedding,
-               sos,
-               eos,
-               scope=None,
-               dtype=None,
-               single_cell_fn=None,
-               attention_mechanism_fn=None,
-               residual_fn=None):
-    super().__init__(params=params,
-                     embedding=embedding,
-                     sos=sos,
-                     eos=eos,
-                     scope=scope,
-                     dtype=dtype,
-                     single_cell_fn=single_cell_fn,
-                     attention_mechanism_fn=attention_mechanism_fn)
-
-    self.residual_fn = residual_fn
-    if not self.residual_fn:
-      self.residual_fn = self._residual_fn
+               sos_id,
+               eos_id,
+               scope="gnmt_decoder",
+               dtype=tf.float32):
+    super(AttentionDecoder, self).__init__(
+      params=params,
+      embedding=embedding,
+      sos_id=sos_id,
+      eos_id=eos_id,
+      scope=scope,
+      dtype=dtype)
 
   def _build_decoder_cell(self,
                           mode,
@@ -53,7 +45,7 @@ class GNMTDecoder(AttentionDecoder):
     attention_option = self.attention
     attention_architecture = self.attention_architecture
     if attention_architecture == "standard":
-      return super()._build_decoder_cell(
+      return super(AttentionDecoder, self)._build_decoder_cell(
         mode, encoder_outputs, encoder_state, sequence_length)
 
     if self.time_major:
@@ -75,20 +67,11 @@ class GNMTDecoder(AttentionDecoder):
     attention_mechanism = self._attention_mechanism_fn(
       attention_option, self.num_units, memory, sequence_length)
 
-    cell_list = self._cell_list(
-      self.unit_type,
-      self.num_units,
-      self.num_decoder_layers,
-      self.num_decoder_residual_layers,
-      self.forget_bias, self.dropout,
-      mode,
-      self.num_gpus,
-      single_cell_fn=self.single_cell_fn,
-      residual_fn=self.residual_fn)
+    cell_list = self._create_rnn_cell(mode, residual_fn=self._residual_fn)
     attention_cell = cell_list.pop(0)
 
     alignment_history = (
-            mode == tf.estimator.ModeKeys.PREDICT and self.beam_width == 0)
+        mode == tf.estimator.ModeKeys.PREDICT and self.beam_width == 0)
     attention_cell = tf.contrib.seq2seq.AttentionWrapper(
       attention_cell,
       attention_mechanism,
