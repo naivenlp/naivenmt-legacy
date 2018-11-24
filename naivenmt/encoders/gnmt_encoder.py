@@ -23,54 +23,55 @@ class GNMTEncoder(BasicEncoder):
 
   def __init__(self,
                params,
-               embedding,
-               scope=None,
-               dtype=None,
-               single_cell_fn=None):
+               scope="gnmt_encoder",
+               dtype=tf.float32):
     """Init encoder.
 
     Args:
       params: hparams
-      embedding: embedding, an instance of ``naivenmt.embeddings.Embedding``
       scope: variables scope
       dtype: variables dtype
-      single_cell_fn: a func to process single rnn cell
     """
-    super().__init__(params=params,
-                     embedding=embedding,
-                     scope=scope,
-                     dtype=dtype,
-                     single_cell_fn=single_cell_fn)
+    super(BasicEncoder, self).__init__(params, scope, dtype)
 
-  def encode(self, mode, features):
+  def encode(self, mode, sequence_ids, sequence_length):
     if self.encoder_type in ["uni", "bi"]:
       raise ValueError("uni or bi encoder type only support BasicEncoder.")
 
     if self.encoder_type != "gnmt":
       raise ValueError("Invalid encoder type: %s" % self.encoder_type)
 
+    # GNMT only has one bidirectional layer
     num_bi_layers = 1
     num_uni_layers = self.num_encoder_layers - num_bi_layers
-    sequence_length = features.source_sequence_length
 
-    with tf.variable_scope("encoder", dtype=self.dtype) as scope:
-      bi_encoder_outputs, bi_encoder_state = self._build_bidirectional_rnn(
+    with tf.variable_scope(self.scope, dtype=self.dtype):
+      if self.time_major:
+        sequence_ids = tf.transpose(sequence_ids, perm=[1, 0, 2])
+
+      # build bidirectional layer
+      cell_fw, cell_bw = self._build_bidirectional_encoder_cell(
         mode=mode,
-        inputs=self.embedding.encoder_embedding_input(features.source_ids),
-        sequence_length=sequence_length,
         num_bi_layers=num_bi_layers,
         num_bi_residual_layers=0)
+      bi_encoder_outputs, bi_encoder_state = tf.nn.bidirectional_dynamic_rnn(
+        cell_fw=cell_fw,
+        cell_bw=cell_bw,
+        inputs=sequence_ids,
+        dtype=self.dtype,
+        sequence_length=sequence_length,
+        time_major=self.time_major,
+        swap_memory=True)
 
-      uni_cell = self._create_rnn_cells(
-        num_layers=num_uni_layers,
-        num_residual_layers=self.num_encoder_residual_layers,
+      # build unidirectional layers
+      uni_cell = self._build_encoder_cell(
         mode=mode,
-        base_gpu=1,
-        single_cell_fn=self.single_cell_fn)
+        num_layers=num_uni_layers,
+        num_residual_layers=self.num_encoder_residual_layers)
 
       encoder_outputs, encoder_state = tf.nn.dynamic_rnn(
-        uni_cell,
-        bi_encoder_outputs,
+        cell=uni_cell,
+        inputs=bi_encoder_outputs,
         dtype=self.dtype,
         sequence_length=sequence_length,
         time_major=self.time_major)

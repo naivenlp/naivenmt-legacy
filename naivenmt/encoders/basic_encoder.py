@@ -23,110 +23,74 @@ class BasicEncoder(AbstractEncoder):
 
   def __init__(self,
                params,
-               embedding,
-               scope=None,
-               dtype=None,
-               single_cell_fn=None):
+               scope="basic_encoder",
+               dtype=tf.float32):
     """Init encoder.
 
     Args:
       params: hparams
-      embedding: embedding, an instance of ``naivenmt.embeddings.Embedding``
       scope: variables scope
       dtype: variables dtype
-      single_cell_fn: a func to process single rnn cell
     """
-    super().__init__(params=params,
-                     embedding=embedding,
-                     scope=scope,
-                     dtype=dtype)
-    self.single_cell_fn = single_cell_fn
-    if not self.single_cell_fn:
-      self.single_cell_fn = self._single_cell_fn
+    super(AbstractEncoder, self).__init__(params, scope, dtype)
 
   def _build_encoder_cell(self,
-                          mode, num_layers, num_residual_layers, base_gpu=0):
-    return self._create_rnn_cells(
-      num_layers=num_layers,
-      num_residual_layers=num_residual_layers,
-      mode=mode,
-      base_gpu=base_gpu,
-      single_cell_fn=self.single_cell_fn)
+                          mode,
+                          num_layers,
+                          num_residual_layers):
+    """Create encoder cells.
 
-  def _create_rnn_cells(self,
-                        num_layers,
-                        num_residual_layers,
-                        mode,
-                        single_cell_fn,
-                        residual_fn=None,
-                        base_gpu=0):
-    cells = self._create_rnn_cell_list(
-      num_layers=num_layers,
-      num_residual_layers=num_residual_layers,
-      mode=mode,
-      single_cell_fn=single_cell_fn,
-      residual_fn=residual_fn,
-      base_gpu=base_gpu)
-    if len(cells) == 1:
-      return cells[0]
-    else:
-      return tf.contrib.rnn.MultiRNNCell(cells)
+    Args:
+      mode: mode
+      num_layers: A integer, number of layers
+      num_residual_layers: A integer, number of residual layers
 
-  def _create_rnn_cell_list(self,
-                            num_layers,
-                            num_residual_layers,
-                            mode,
-                            single_cell_fn,
-                            residual_fn=None,
-                            base_gpu=0):
+    Returns:
+      Encoder's rnn cells.
+    """
     cells = []
     for i in range(num_layers):
-      residual_conn = (i >= num_layers - num_residual_layers)
-      device = self._get_device_str(i + base_gpu, self.num_gpus)
-      cell = single_cell_fn(
+      residual = (i >= num_layers - num_residual_layers)
+      cell = self._build_single_cell(
         unit_type=self.unit_type,
         num_units=self.num_units,
         forget_bias=self.forget_bias,
         dropout=self.dropout,
         mode=mode,
-        device=device,
-        residual_conn=residual_conn,
-        residual_fn=residual_fn)
+        residual_conn=residual,
+        residual_fn=None)
       cells.append(cell)
-    return cells
+    cells = cells[0] if len(cells) == 1 else cells
+    return tf.nn.rnn_cell.MultiRNNCell(cells)
 
   @staticmethod
-  def _single_cell_fn(unit_type,
-                      num_units,
-                      forget_bias,
-                      dropout,
-                      mode,
-                      device=None,
-                      residual_conn=False,
-                      residual_fn=None):
-    """Create a single rnn cell.
+  def _build_single_cell(unit_type,
+                         num_units,
+                         forget_bias,
+                         dropout,
+                         mode,
+                         residual_conn=False,
+                         residual_fn=None):
+    """Build single rnn cell.
 
     Args:
-      unit_type: unit type of cell
-      num_units: number of cells
-      forget_bias: forget bias for lstm cells
-      dropout: dropout
-      mode: mode
-      device: device that holds this cell
-      residual_conn: If use residual connection or not
-      residual_fn: process residual connections if use residual connections
+      unit_type: A constance string, unit type
+      num_units: A integer, number of rnn's units
+      forget_bias: A float, forget bias for LSTM cell
+      dropout: A float, dropout rate
+      residual_conn: A boolean, use residual connection or not
+      residual_fn: The function to map raw cell inputs and raw cell
+        outputs to the actual cell outputs of the residual network.
 
     Returns:
-      A single rnn cell
+      A RNNCell or it's subclass
     """
-
-    dropout = dropout if mode == tf.estimator.ModeKeys.TRAIN else 0.0
-
+    dropout = dropout if mode != tf.estimator.ModeKeys.PREDICT else 0.0
     if unit_type == "lstm":
-      single_cell = tf.contrib.rnn.BasicLSTMCell(
+      single_cell = tf.nn.rnn_cell.BasicLSTMCell(
         num_units, forget_bias=forget_bias)
     elif unit_type == "gru":
-      single_cell = tf.contrib.rnn.GRUCell(num_units)
+      single_cell = tf.nn.rnn_cell.GRUCell(num_units)
     elif unit_type == "layer_norm_lstm":
       single_cell = tf.contrib.rnn.LayerNormBasicLSTMCell(
         num_units, forget_bias=forget_bias, layer_norm=True)
@@ -134,22 +98,8 @@ class BasicEncoder(AbstractEncoder):
       single_cell = tf.contrib.rnn.NASCell(num_units)
     else:
       raise ValueError("Invalid unit type: %s" % unit_type)
-
     if dropout > 0.0:
-      single_cell = tf.contrib.rnn.DropoutWrapper(
-        cell=single_cell, input_keep_prob=(1.0 - dropout))
+      single_cell = tf.nn.rnn_cell.DropoutWrapper(single_cell, 1.0 - dropout)
     if residual_conn:
-      single_cell = tf.contrib.rnn.ResidualWrapper(
-        single_cell, residual_fn=residual_fn)
-
-    if device:
-      single_cell = tf.contrib.rnn.DeviceWrapper(
-        single_cell, device)
+      single_cell = tf.nn.rnn_cell.ResidualWrapper(single_cell, residual_fn)
     return single_cell
-
-  @staticmethod
-  def _get_device_str(device_id, num_gpus):
-    if num_gpus == 0:
-      return "/cpu:0"
-    device_str = "/gpu:%d" % (device_id % num_gpus)
-    return device_str

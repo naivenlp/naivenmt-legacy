@@ -22,16 +22,17 @@ class EncoderInterface(abc.ABC):
   """Encoder interface."""
 
   @abc.abstractmethod
-  def encode(self, mode, features):
+  def encode(self, mode, sequence_ids, sequence_length):
     """Encode source inputs.
 
     Args:
       mode: mode
-      features: source inputs, an instance of ``naivenmt.inputters.Features``
+      sequence_ids: A tensor, integer representation of inputs sequence
+      sequence_length: A tensor, input sequences' length
 
     Returns:
-      encoder_outputs: outputs of encoder
-      encoder_state: state of encoder
+      encoder_outputs: A tensor, outputs of encoder
+      encoder_state: A tensor, states of encoder
     """
     raise NotImplementedError()
 
@@ -41,21 +42,18 @@ class AbstractEncoder(EncoderInterface):
 
   def __init__(self,
                params,
-               embedding,
-               scope=None,
-               dtype=None):
+               scope="encoder",
+               dtype=tf.float32):
     """Init abstract encoder.
 
     Args:
-      params: hparams
-      embedding: embedding, an instance of ``naivenmt.embeddings.Embedding``
-      scope: variables scope
-      dtype: variables dtype
+      params: A python object, hparams
+      scope: A constant string, variables scope
+      dtype: A constant, variables dtype
     """
 
-    self.embedding = embedding
-    self.scope = scope or "encoder"
-    self.dtype = dtype or tf.float32
+    self.scope = scope
+    self.dtype = dtype
 
     self.num_encoder_layers = params.num_encoder_layers
     self.num_encoder_residual_layers = params.num_encoder_residual_layers
@@ -65,21 +63,20 @@ class AbstractEncoder(EncoderInterface):
     self.num_units = params.num_units
     self.forget_bias = params.forget_bias
     self.dropout = params.dropout
-    self.num_gpus = params.num_gpus
 
-  def encode(self, mode, features):
+  def encode(self, mode, sequence_ids, sequence_length):
     num_layers = self.num_encoder_layers
     num_residual_layers = self.num_encoder_residual_layers
-    sequence_length = features.source_sequence_length
-    with tf.variable_scope(self.scope, dtype=self.dtype) as scope:
-      encoder_embedding_input = self.embedding.encoder_embedding_input(
-        features.source_ids)
+
+    with tf.variable_scope(self.scope, dtype=self.dtype):
+      if self.time_major:
+        sequence_ids = tf.transpose(sequence_ids, perm=[1, 0, 2])
 
       if self.encoder_type == "uni":
         cell = self._build_encoder_cell(mode, num_layers, num_residual_layers)
         encoder_outputs, encoder_state = tf.nn.dynamic_rnn(
-          cell,
-          encoder_embedding_input,
+          cell=cell,
+          inputs=sequence_ids,
           dtype=self.dtype,
           sequence_length=sequence_length,
           time_major=self.time_major,
@@ -88,13 +85,19 @@ class AbstractEncoder(EncoderInterface):
         num_bi_layers = int(num_layers / 2)
         num_bi_residual_layers = int(num_residual_layers / 2)
 
-        encoder_outputs, bi_encoder_state = self._build_bidirectional_rnn(
+        fw_cell, bw_cell = self._build_bidirectional_encoder_cell(
           mode=mode,
-          inputs=encoder_embedding_input,
-          sequence_length=sequence_length,
           num_bi_layers=num_bi_layers,
           num_bi_residual_layers=num_bi_residual_layers)
-
+        bi_outputs, bi_encoder_state = tf.nn.bidirectional_dynamic_rnn(
+          cell_fw=fw_cell,
+          cell_bw=bw_cell,
+          inputs=sequence_ids,
+          dtype=self.dtype,
+          sequence_length=sequence_length,
+          time_major=self.time_major,
+          swap_memory=True)
+        encoder_outputs = tf.concat(bi_outputs, -1)
         if num_bi_layers == 1:
           encoder_state = bi_encoder_state
         else:
@@ -111,54 +114,39 @@ class AbstractEncoder(EncoderInterface):
   def _build_encoder_cell(self,
                           mode,
                           num_layers,
-                          num_residual_layers,
-                          base_gpu=0):
+                          num_residual_layers):
     """Create encoder cells.
 
     Args:
       mode: mode
-      num_layers: number of layers
-      num_residual_layers: number of residual layers
-      base_gpu: offset of gpu device, to decide which gpu to use
+      num_layers: A integer, number of layers
+      num_residual_layers: A integer, number of residual layers
 
     Returns:
-      encoder network with rnn cells.
+      Encoder's rnn cells.
     """
     raise NotImplementedError()
 
-  def _build_bidirectional_rnn(self,
-                               mode,
-                               inputs,
-                               sequence_length,
-                               num_bi_layers,
-                               num_bi_residual_layers,
-                               base_gpu=0):
+  def _build_bidirectional_encoder_cell(self,
+                                        mode,
+                                        num_bi_layers,
+                                        num_bi_residual_layers):
     """Create bi-directional cells.
 
     Args:
       mode: mode
-      inputs: embedding inputs
-      sequence_length: source sequence length
-      num_bi_layers: number of bidirectional layers
-      num_bi_residual_layers: number of bidirectional residual layers
-      base_gpu: offset of gpu device, to decide which gpu to use.
+      num_bi_layers: A integer, number of bidirectional layers
+      num_bi_residual_layers: A integer, number of bidirectional residual layers
 
     Returns:
-      encoder network with bidirectional rnn cells.
+      Encoder's forward and backward rnn cells.
     """
     forward_cell = self._build_encoder_cell(
-      mode, num_bi_layers, num_bi_residual_layers, base_gpu=base_gpu)
+      mode=mode,
+      num_layers=num_bi_layers,
+      num_residual_layers=num_bi_residual_layers)
     backward_cell = self._build_encoder_cell(
-      mode, num_bi_layers, num_bi_residual_layers,
-      base_gpu=(base_gpu + num_bi_layers))
-
-    bi_outputs, bi_state = tf.nn.bidirectional_dynamic_rnn(
-      forward_cell,
-      backward_cell,
-      inputs,
-      dtype=self.dtype,
-      sequence_length=sequence_length,
-      time_major=self.time_major,
-      swap_memory=True)
-
-    return tf.concat(bi_outputs, -1), bi_state
+      mode=mode,
+      num_layers=num_bi_layers,
+      num_residual_layers=num_bi_residual_layers)
+    return forward_cell, backward_cell
