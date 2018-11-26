@@ -22,12 +22,12 @@ class EncoderInterface(abc.ABC):
   """Encoder interface."""
 
   @abc.abstractmethod
-  def encode(self, mode, sequence_ids, sequence_length):
+  def encode(self, mode, sequence_inputs, sequence_length):
     """Encode source inputs.
 
     Args:
       mode: mode
-      sequence_ids: A tensor, integer representation of inputs sequence
+      sequence_inputs: A tensor, embedding representation of inputs sequence
       sequence_length: A tensor, input sequences' length
 
     Returns:
@@ -64,19 +64,19 @@ class AbstractEncoder(EncoderInterface):
     self.forget_bias = params.forget_bias
     self.dropout = params.dropout
 
-  def encode(self, mode, sequence_ids, sequence_length):
+  def encode(self, mode, sequence_inputs, sequence_length):
     num_layers = self.num_encoder_layers
     num_residual_layers = self.num_encoder_residual_layers
 
     with tf.variable_scope(self.scope, dtype=self.dtype):
       if self.time_major:
-        sequence_ids = tf.transpose(sequence_ids, perm=[1, 0, 2])
+        sequence_inputs = tf.transpose(sequence_inputs, perm=[1, 0, 2])
 
       if self.encoder_type == "uni":
         cell = self._build_encoder_cell(mode, num_layers, num_residual_layers)
         encoder_outputs, encoder_state = tf.nn.dynamic_rnn(
           cell=cell,
-          inputs=sequence_ids,
+          inputs=sequence_inputs,
           dtype=self.dtype,
           sequence_length=sequence_length,
           time_major=self.time_major,
@@ -92,7 +92,7 @@ class AbstractEncoder(EncoderInterface):
         bi_outputs, bi_encoder_state = tf.nn.bidirectional_dynamic_rnn(
           cell_fw=fw_cell,
           cell_bw=bw_cell,
-          inputs=sequence_ids,
+          inputs=sequence_inputs,
           dtype=self.dtype,
           sequence_length=sequence_length,
           time_major=self.time_major,

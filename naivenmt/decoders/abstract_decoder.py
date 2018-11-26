@@ -53,6 +53,9 @@ class AbstractDecoder(DecoderInterface):
 
     Args:
       params: A python object, hparams
+      embedding: A tensor, target sequence's embedding
+      sos_id: A constant, int64 id of SOS token
+      eos_id: A constant, int64 id of EOS token
       scope: A constant string, variables scope
       dtype: A dtype, variables dtype
     """
