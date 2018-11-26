@@ -25,7 +25,7 @@ class AbstractModel(abc.ABC):
 
     Args:
       params: A python object, hyper params
-      mode. A scalar, one of `tf.estimator.ModeKeys`
+      mode: A scalar, one of `tf.estimator.ModeKeys`
 
     Returns:
       A (features, labels) tuple.
@@ -38,10 +38,14 @@ class AbstractModel(abc.ABC):
 
   def serving_input_receiver_fn(self):
     """Build input receiver fn for exporting saved model."""
+    # receiver_tensors are what we receive from client
     receiver_tensors = {
+      # inputs tokens, shape: [BATCH_SIZE, TIME_STEPS]
       "inputs": tf.placeholder(dtype=tf.string, shape=(None, None)),
+      # token's length, shape: [BATCH_SIZE]
       "inputs_length": tf.placeholder(dtype=tf.int32, shape=(None))
     }
+    # features are what we pass to model_fn
     features = receiver_tensors.copy()
     return tf.estimator.export.ServingInputReceiver(
       features=features,
