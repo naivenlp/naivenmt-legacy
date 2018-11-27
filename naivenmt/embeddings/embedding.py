@@ -18,6 +18,7 @@ import codecs
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops import lookup_ops
 
 VOCAB_SIZE_THRESHOLD = 50000
 
@@ -39,7 +40,7 @@ class EmbeddingInterface(abc.ABC):
     """Create encoder embedding input.
 
     Args:
-      inputs: ids of source
+      inputs: A tf.string tensor
 
     Returns:
       embedding presentation of inputs
@@ -51,7 +52,7 @@ class EmbeddingInterface(abc.ABC):
     """Create decoder embedding input.
 
     Args:
-      inputs: ids of target
+      inputs: A tf.string tensor
 
     Returns:
       embedding presentation of inputs
@@ -66,14 +67,16 @@ class Embedding(EmbeddingInterface):
                tgt_vocab_size,
                src_embedding_size,
                tgt_embedding_size,
-               share_vocab=False,
-               num_partitions=0,
-               dtype=None,
-               src_vocab_file=None,
-               tgt_vocab_file=None,
+               src_vocab_file,
+               tgt_vocab_file,
                src_embedding_file=None,
                tgt_embedding_file=None,
-               scope=None):
+               share_vocab=False,
+               num_partitions=0,
+               unk='<unk>',
+               unk_id=0,
+               dtype=tf.float32,
+               scope="embedding"):
     self.share_vocab = share_vocab
     self.src_vocab_file = src_vocab_file
     self.tgt_vocab_file = tgt_vocab_file
@@ -89,6 +92,17 @@ class Embedding(EmbeddingInterface):
     self._encoder_embedding = None
     self._decoder_embedding = None
 
+    self.unk = unk
+    self.unk_id = unk_id
+
+    self.src_str2idx_table = lookup_ops.index_table_from_file(
+      self.src_vocab_file, default_value=self.unk_id)
+    self.src_idx2str_table = lookup_ops.index_to_string_table_from_file(
+      self.src_vocab_file, default_value=self.unk)
+    self.tgt_str2idx_table = lookup_ops.index_table_from_file(
+      self.tgt_vocab_file, default_value=self.unk_id)
+    self.tgt_idx2str_table = lookup_ops.index_to_string_table_from_file(
+      self.tgt_vocab_file, default_value=self.unk)
     self._embedding()
 
   def _embedding(self):
@@ -103,40 +117,26 @@ class Embedding(EmbeddingInterface):
 
     with tf.variable_scope(self.scope, dtype=self.dtype,
                            partitioner=partitioner) as scope:
+      self._encoder_embedding = self._create_or_load_embeddings(
+        name="encoder_embedding",
+        vocab_file=self.src_vocab_file,
+        embedding_file=self.src_embedding_file,
+        vocab_size=self.src_vocab_size,
+        embedding_size=self.src_embedding_size,
+        dtype=self.dtype)
       if self.share_vocab:
         if self.src_vocab_size != self.tgt_vocab_size:
-          raise ValueError(
-            "Share embedding but different src/tgt vocab sizes %d vs. %d" % (
-              self.src_vocab_size, self.tgt_vocab_size))
-        assert self.src_embedding_size == self.tgt_embedding_size
-        vocab_file = self.src_vocab_file or self.tgt_vocab_file
-        embedding_file = self.src_embedding_file or self.tgt_embedding_file
-        self._encoder_embedding = self._create_or_load_embeddings(
-          "embedding_share",
-          vocab_file,
-          embedding_file,
-          self.src_vocab_size,
-          self.src_embedding_size,
-          self.dtype)
-        self._decoder_embedding = self.encoder_embedding
+          raise ValueError("Share embedding but different src/tgt vocab size.")
+        self._decoder_embedding = self._encoder_embedding
       else:
-        with tf.variable_scope("encoder", partitioner=partitioner):
-          self._encoder_embedding = self._create_or_load_embeddings(
-            "encoder_embedding",
-            self.src_vocab_file,
-            self.src_embedding_file,
-            self.src_vocab_size,
-            self.src_embedding_size,
-            self.dtype)
-        with tf.variable_scope("decoder", partitioner=partitioner):
-          self._decoder_embedding = self._create_or_load_embeddings(
-            "decoder_embedding",
-            self.tgt_vocab_file,
-            self.tgt_embedding_file,
-            self.tgt_vocab_size,
-            self.tgt_embedding_size,
-            self.dtype)
-      return self.encoder_embedding, self._decoder_embedding
+        self._decoder_embedding = self._create_or_load_embeddings(
+          name="decoder_embedding",
+          vocab_file=self.tgt_vocab_file,
+          vocab_size=self.tgt_vocab_size,
+          embedding_file=self.tgt_embedding_file,
+          embedding_size=self.tgt_embedding_size,
+          dtype=self.dtype)
+      return self._encoder_embedding, self._decoder_embedding
 
   def _create_or_load_embeddings(self,
                                  name,
@@ -220,7 +220,9 @@ class Embedding(EmbeddingInterface):
     return self._decoder_embedding
 
   def encoder_embedding_input(self, inputs):
-    return tf.nn.embedding_lookup(self.encoder_embedding, inputs)
+    inputs_ids = self.src_str2idx_table.lookup(inputs)
+    return tf.nn.embedding_lookup(self.encoder_embedding, inputs_ids)
 
   def decoder_embedding_input(self, inputs):
-    return tf.nn.embedding_lookup(self.decoder_embedding, inputs)
+    inputs_ids = self.tgt_str2idx_table.lookup(inputs)
+    return tf.nn.embedding_lookup(self.decoder_embedding, inputs_ids)

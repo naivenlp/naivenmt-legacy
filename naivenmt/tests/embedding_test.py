@@ -13,29 +13,19 @@
 # limitations under the License.
 # ==============================================================================
 
-import argparse
-import os
-
 import tensorflow as tf
 
-from naivenmt.configs import add_arguments, Hparams
+from naivenmt.configs import HParamsBuilder
 from naivenmt.embeddings import Embedding
-from naivenmt.tests.hparams_test import add_required_params
-from naivenmt.tests.common_test_utils import *
+from naivenmt.tests import common_test_utils as common_utils
 
-TEST_DATA_DIR = os.path.abspath(os.path.join(os.pardir, "../", "testdata"))
+TEST_DATA_DIR = common_utils.get_testdata_dir()
 
 
 class EmbeddingTest(tf.test.TestCase):
 
-  def setUp(self):
-    parser = argparse.ArgumentParser()
-    add_arguments(parser)
-    self.flags, _ = parser.parse_known_args()
-    add_required_params(self.flags)
-
   def testCreateEmbedding(self):
-    self.hparams = Hparams(self.flags).build()
+    self.hparams = HParamsBuilder().build()
 
     print("Source vocab size: %d" % self.hparams.source_vocab_size)
     print("Target vocab size: %d" % self.hparams.target_vocab_size)
@@ -67,24 +57,21 @@ class EmbeddingTest(tf.test.TestCase):
       print(sess.run(embedding.encoder_embedding_input([0, 1, 2])))
 
   def testLoadFromFile(self):
-    self.flags.vocab_prefix = get_testdata_file("test_embed_vocab")
+    configs = {
+      "embed_prefix": common_utils.get_testdata_file("test_embed"),
+      "vocab_prefix": common_utils.get_testdata_file("test_embed_vocab")
+    }
+    hparams = HParamsBuilder(configs).build()
 
-    self.hparams = Hparams(self.flags).build()
+    self.assertEqual(6, hparams.source_vocab_size)
+    self.assertEqual(6, hparams.target_vocab_size)
 
-    print("Source vocab size: %d" % self.hparams.source_vocab_size)
-    print("Target vocab size: %d" % self.hparams.target_vocab_size)
-    self.assertEqual(6, self.hparams.source_vocab_size)
-    self.assertEqual(6, self.hparams.target_vocab_size)
-
-    src_embedding_file = os.path.join(TEST_DATA_DIR, "test_embed.txt")
-    tgt_embedding_file = src_embedding_file
-
-    embedding = Embedding(src_vocab_size=self.hparams.source_vocab_size,
-                          tgt_vocab_size=self.hparams.target_vocab_size,
-                          src_vocab_file=self.hparams.source_vocab_file,
-                          tgt_vocab_file=self.hparams.target_vocab_file,
-                          src_embedding_file=src_embedding_file,
-                          tgt_embedding_file=tgt_embedding_file,
+    embedding = Embedding(src_vocab_size=hparams.source_vocab_size,
+                          tgt_vocab_size=hparams.target_vocab_size,
+                          src_vocab_file=hparams.source_vocab_file,
+                          tgt_vocab_file=hparams.target_vocab_file,
+                          src_embedding_file=hparams.source_embed_file,
+                          tgt_embedding_file=hparams.target_embed_file,
                           share_vocab=False,
                           src_embedding_size=4,
                           tgt_embedding_size=4)
@@ -92,23 +79,31 @@ class EmbeddingTest(tf.test.TestCase):
       sess.run(tf.tables_initializer())
       sess.run(tf.global_variables_initializer())
 
-      encoder_input = embedding.encoder_embedding_input(tf.constant([3, 4]))
-      self.assertEqual(2, sess.run(tf.shape(encoder_input))[0])
-      self.assertEqual(4, sess.run(tf.shape(encoder_input))[1])
-      t = tf.constant([[1.5, 2.5, 3.5, 4.5], [1.4, 2.4, 3.4, 4.4]],
-                      shape=(2, 4), dtype=tf.float32)
-      self.assertAllEqual(t, sess.run(encoder_input))
-      print(sess.run(encoder_input))
+      # embedding of 'The' and 'behind'
+      encoder_input = embedding.encoder_embedding_input(
+        tf.constant([[b'The', '</s>'], ['The', 'behind']]))
+      print(sess.run(tf.shape(encoder_input)))
+      self.assertEqual(2, sess.run(tf.shape(encoder_input))[0])  # batch size
+      self.assertEqual(2, sess.run(tf.shape(encoder_input))[1])  # time steps
+      self.assertEqual(4, sess.run(tf.shape(encoder_input))[2])  # embed size
+      encoder_input = sess.run(encoder_input)
+      the = sess.run(tf.constant([1.5, 2.5, 3.5, 4.5], dtype=tf.float32))
+      behind = sess.run(tf.constant([2.4, 3.4, 4.4, 5.4], dtype=tf.float32))
+      self.assertAllEqual(the, encoder_input[0][0])
+      self.assertAllEqual(behind, encoder_input[1][1])
 
-      decoder_input = embedding.decoder_embedding_input(tf.constant([3, 4, 5]))
-      self.assertEqual(3, sess.run(tf.shape(decoder_input))[0])
-      self.assertEqual(4, sess.run(tf.shape(decoder_input))[1])
-      t = tf.constant(
-        [[1.3, 2.3, 3.3, 4.3], [1.2, 2.2, 3.3, 4.3], [1.1, 2.1, 3.1, 4.1]])
-      self.assertAllEqual(t, sess.run(decoder_input))
-      print(sess.run(decoder_input))
-
-      print(sess.run(embedding.encoder_embedding_input([0, 1, 2])))
+      decoder_input = embedding.decoder_embedding_input(
+        tf.constant([['Khoa', 'học', 'sau']]))
+      self.assertEqual(1, sess.run(tf.shape(decoder_input))[0])
+      self.assertEqual(3, sess.run(tf.shape(decoder_input))[1])
+      self.assertEqual(4, sess.run(tf.shape(decoder_input))[2])
+      decoder_input = sess.run(decoder_input)
+      khoa = sess.run(tf.constant([1.3, 2.3, 3.3, 4.3], dtype=tf.float32))
+      hoc = sess.run(tf.constant([1.2, 2.2, 3.3, 4.3], dtype=tf.float32))
+      sau = sess.run(tf.constant([1.1, 2.1, 3.1, 4.1], dtype=tf.float32))
+      self.assertAllEqual(khoa, decoder_input[0][0])
+      self.assertAllEqual(hoc, decoder_input[0][1])
+      self.assertAllEqual(sau, decoder_input[0][2])
 
 
 if __name__ == "__main__":
