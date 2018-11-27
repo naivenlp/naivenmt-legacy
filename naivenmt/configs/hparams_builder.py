@@ -1,26 +1,23 @@
-import json
 import os
 
 import tensorflow as tf
 
 __all__ = ["HParamsBuilder"]
 
-UNK = '<unk>'
-SOS = '<s>'
-EOS = '</s>'
-UNK_ID = 0
-
 
 class HParamsBuilder(object):
+  """Build hparams."""
 
-  def __init__(self, json_file):
+  def __init__(self, dict_config=None):
+    """Constructor.
+
+    Args:
+      dict_config: A dict of params
+    """
     self._hparams = tf.contrib.training.HParams()
-    if not os.path.exists(json_file):
-      raise FileNotFoundError("File %s does not exist." % json_file)
     self.configs = self._get_default_configs()
-    with open(json_file, mode="rt", encoding="utf8") as f:
-      config = json.load(f)
-    self.configs.update(config)
+    if dict_config is not None:
+      self.configs.update(dict_config)
 
   def build(self):
     self._check_data_files()
@@ -142,9 +139,9 @@ class HParamsBuilder(object):
 
     if self.configs['embed_prefix']:
       self.configs['source_embed_file'] = (
-              self.configs['embed_prefix'] + "." + self.configs['src'])
+          self.configs['embed_prefix'] + "." + self.configs['src'])
       self.configs['target_embed_file'] = (
-              self.configs['embed_prefix'] + "." + self.configs['tgt'])
+          self.configs['embed_prefix'] + "." + self.configs['tgt'])
     else:
       self.configs['source_embed_file'] = None
       self.configs['target_embed_file'] = None
@@ -161,7 +158,7 @@ class HParamsBuilder(object):
     tgt_vocab = self.configs['vocab_prefix'] + "." + self.configs['tgt']
     tgt_vocab_size, tgt_vocab_file = self._check_vocab_file(
       tgt_vocab,
-      [self.configs['unk'], self.configs['eos']])
+      [self.configs['unk'], self.configs['sos'], self.configs['eos']])
     self.configs['target_vocab_file'] = tgt_vocab_file
     self.configs['target_vocab_size'] = tgt_vocab_size
 

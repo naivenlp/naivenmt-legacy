@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 
-from .arguments import add_arguments
 from .hparams_builder import HParamsBuilder
 
-__all__ = ["add_arguments", "HParamsBuilder"]
+__all__ = ["HParamsBuilder"]
