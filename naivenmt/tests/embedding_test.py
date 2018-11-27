@@ -18,6 +18,7 @@ import tensorflow as tf
 from naivenmt.configs import HParamsBuilder
 from naivenmt.embeddings import Embedding
 from naivenmt.tests import common_test_utils as common_utils
+from naivenmt.utils import dataset_utils
 
 TEST_DATA_DIR = common_utils.get_testdata_dir()
 
@@ -44,17 +45,18 @@ class EmbeddingTest(tf.test.TestCase):
       sess.run(tf.tables_initializer())
       sess.run(tf.global_variables_initializer())
 
-      encoder_input = embedding.encoder_embedding_input(tf.constant([0, 1]))
-      self.assertEqual(2, sess.run(tf.shape(encoder_input))[0])
-      self.assertEqual(16, sess.run(tf.shape(encoder_input))[1])
+      encoder_input = embedding.encoder_embedding_input(
+        tf.constant([['<unk>', '<s>']]))
+      self.assertEqual(1, sess.run(tf.shape(encoder_input))[0])  # batch size
+      self.assertEqual(2, sess.run(tf.shape(encoder_input))[1])  # time steps
+      self.assertEqual(16, sess.run(tf.shape(encoder_input))[2])  # embed size
       print(sess.run(encoder_input))
 
-      decoder_input = embedding.decoder_embedding_input(tf.constant([0, 1, 2]))
-      self.assertEqual(3, sess.run(tf.shape(decoder_input))[0])
-      self.assertEqual(16, sess.run(tf.shape(decoder_input))[1])
+      decoder_input = embedding.decoder_embedding_input(
+        tf.constant([['<unk>', '<s>', '</s>']]))
+      self.assertEqual(1, sess.run(tf.shape(decoder_input))[0])
+      self.assertEqual(16, sess.run(tf.shape(decoder_input))[2])
       print(sess.run(decoder_input))
-
-      print(sess.run(embedding.encoder_embedding_input([0, 1, 2])))
 
   def testLoadFromFile(self):
     configs = {
@@ -104,6 +106,44 @@ class EmbeddingTest(tf.test.TestCase):
       self.assertAllEqual(khoa, decoder_input[0][0])
       self.assertAllEqual(hoc, decoder_input[0][1])
       self.assertAllEqual(sau, decoder_input[0][2])
+
+  def testEmbeddingEncoderInput(self):
+    configs = {
+      "embed_prefix": common_utils.get_testdata_file("test_embed"),
+      "vocab_prefix": common_utils.get_testdata_file("test_embed_vocab"),
+      "random_seed": 1000,
+      "num_buckets": 5,
+      "src_max_len": 50,
+      "tgt_max_len": 50,
+      "num_parallel_calls": 4,
+      "buff_size": 1024,
+      "skip_count": 0,
+      "batch_size": 4,
+      "source_embedding_size": 4,
+      "target_embedding_size": 4
+    }
+    hparams = HParamsBuilder(configs).build()
+    embedding = Embedding(src_vocab_size=hparams.source_vocab_size,
+                          tgt_vocab_size=hparams.target_vocab_size,
+                          src_vocab_file=hparams.source_vocab_file,
+                          tgt_vocab_file=hparams.target_vocab_file,
+                          share_vocab=False,
+                          src_embedding_size=hparams.source_embedding_size,
+                          tgt_embedding_size=hparams.target_embedding_size)
+
+    features, labels = dataset_utils.build_dataset(
+      hparams,
+      tf.estimator.ModeKeys.TRAIN)
+    features_embedding = embedding.encoder_embedding_input(features['inputs'])
+    with self.test_session() as sess:
+      sess.run(tf.global_variables_initializer())
+      sess.run(tf.tables_initializer())
+      print(sess.run(features_embedding))
+      self.assertEqual(3, sess.run(tf.rank(features_embedding)))
+      self.assertEqual(hparams.batch_size,
+                       sess.run(tf.shape(features_embedding))[0])
+      self.assertEqual(hparams.source_embedding_size,
+                       sess.run(tf.shape(features_embedding))[2])
 
 
 if __name__ == "__main__":
