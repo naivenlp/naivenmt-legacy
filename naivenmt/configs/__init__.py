@@ -14,7 +14,6 @@
 # ==============================================================================
 
 from .arguments import add_arguments
-from .hparams import Hparams
 from .hparams_builder import HParamsBuilder
 
-__all__ = ["add_arguments", "Hparams", "HParamsBuilder"]
+__all__ = ["add_arguments", "HParamsBuilder"]
