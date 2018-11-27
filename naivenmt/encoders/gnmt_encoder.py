@@ -34,7 +34,7 @@ class GNMTEncoder(BasicEncoder):
     """
     super(BasicEncoder, self).__init__(params, scope, dtype)
 
-  def encode(self, mode, sequence_ids, sequence_length):
+  def encode(self, mode, sequence_inputs, sequence_length):
     if self.encoder_type in ["uni", "bi"]:
       raise ValueError("uni or bi encoder type only support BasicEncoder.")
 
@@ -47,7 +47,7 @@ class GNMTEncoder(BasicEncoder):
 
     with tf.variable_scope(self.scope, dtype=self.dtype):
       if self.time_major:
-        sequence_ids = tf.transpose(sequence_ids, perm=[1, 0, 2])
+        sequence_inputs = tf.transpose(sequence_inputs, perm=[1, 0, 2])
 
       # build bidirectional layer
       cell_fw, cell_bw = self._build_bidirectional_encoder_cell(
@@ -57,7 +57,7 @@ class GNMTEncoder(BasicEncoder):
       bi_encoder_outputs, bi_encoder_state = tf.nn.bidirectional_dynamic_rnn(
         cell_fw=cell_fw,
         cell_bw=cell_bw,
-        inputs=sequence_ids,
+        inputs=sequence_inputs,
         dtype=self.dtype,
         sequence_length=sequence_length,
         time_major=self.time_major,
