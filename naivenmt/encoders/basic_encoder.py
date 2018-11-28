@@ -32,7 +32,7 @@ class BasicEncoder(AbstractEncoder):
       scope: variables scope
       dtype: variables dtype
     """
-    super(AbstractEncoder, self).__init__(params, scope, dtype)
+    super(BasicEncoder, self).__init__(params, scope, dtype)
 
   def _build_encoder_cell(self,
                           mode,
@@ -60,7 +60,7 @@ class BasicEncoder(AbstractEncoder):
         residual_conn=residual,
         residual_fn=None)
       cells.append(cell)
-    cells = cells[0] if len(cells) == 1 else cells
+    # cells = cells[0] if len(cells) == 1 else cells
     return tf.nn.rnn_cell.MultiRNNCell(cells)
 
   @staticmethod
@@ -87,7 +87,7 @@ class BasicEncoder(AbstractEncoder):
     """
     dropout = dropout if mode != tf.estimator.ModeKeys.PREDICT else 0.0
     if unit_type == "lstm":
-      single_cell = tf.nn.rnn_cell.BasicLSTMCell(
+      single_cell = tf.nn.rnn_cell.LSTMCell(
         num_units, forget_bias=forget_bias)
     elif unit_type == "gru":
       single_cell = tf.nn.rnn_cell.GRUCell(num_units)
