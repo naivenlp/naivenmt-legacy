@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import tensorflow as tf
+from tensorflow.python.ops import lookup_ops
 
 from naivenmt.models.abstract_model import AbstractModel
 from naivenmt.utils import dataset_utils
@@ -67,8 +68,9 @@ class Seq2SeqModel(AbstractModel):
 
       if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = self.build_predictions(predict_ids, params)
+        key = tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
         export_outputs = {
-          "export_outputs": predictions
+          key: predictions
         }
         prediction_hooks = self.build_prediction_hooks()
         return tf.estimator.EstimatorSpec(
@@ -100,7 +102,14 @@ class Seq2SeqModel(AbstractModel):
           loss=loss)
 
   def build_predictions(self, predict_ids, params):
-    raise NotImplementedError()
+    tgt_idx2str = lookup_ops.index_to_string_table_from_file(
+      params.target_vocab_file, default_value=params.unk)
+    predict_tgt = tgt_idx2str.lookup(tf.cast(predict_ids, tf.int64))
+    predictions = {
+      "predict_ids": predict_ids,
+      "predict_strings": predict_tgt
+    }
+    return predictions
 
   def build_training_hooks(self):
     return []
@@ -112,7 +121,12 @@ class Seq2SeqModel(AbstractModel):
     return []
 
   def build_eval_metrics(self, predict_ids, labels, src_len, params):
-    raise NotImplementedError()
+    actual_ids = labels['tgt_in']
+    weights = tf.sequence_mask(src_len)
+    metrics = {
+      "accuracy": tf.metrics.accuracy(actual_ids, predict_ids, weights)
+    }
+    return metrics
 
   def compute_loss(self, logits, labels, params):
     target_output = labels['tgt_out']

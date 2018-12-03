@@ -13,23 +13,22 @@
 # limitations under the License.
 # ==============================================================================
 
+import tensorflow as tf
+from tensorflow.python.ops import lookup_ops
+
 from naivenmt.decoders.attention_decoder import AttentionDecoder
 from naivenmt.embeddings.embedding import Embedding
 from naivenmt.encoders.basic_encoder import BasicEncoder
-from naivenmt.inputters.inputter import Inputter
-from naivenmt.models.sequence_to_sequence import SequenceToSequence
+from naivenmt.models import Seq2SeqModel
 
 
-class AttentionModel(SequenceToSequence):
+class AttentionModel(Seq2SeqModel):
   """Attention NMT model."""
 
   def __init__(self,
                params,
-               scope=None,
-               dtype=None,
-               lifecycle_hooks=None,
-               tensors_hooks=None):
-    inputter = Inputter(params=params)
+               scope="attention_model",
+               dtype=tf.float32):
     embedding = Embedding(src_vocab_size=params.source_vocab_size,
                           tgt_vocab_size=params.target_vocab_size,
                           share_vocab=params.share_vocab,
@@ -41,17 +40,21 @@ class AttentionModel(SequenceToSequence):
                           tgt_embedding_file=params.target_embedding_file,
                           dtype=dtype)
     encoder = BasicEncoder(params=params,
-                           embedding=embedding,
+                           scope="basic_encoder",
                            dtype=dtype)
+    tgt_str2idx = lookup_ops.index_table_from_file(params.target_vocab_file,
+                                                   default_value=0)
+    sos_id = tgt_str2idx.lookup(params.sos)
+    eos_id = tgt_str2idx.lookup(params.eos)
     decoder = AttentionDecoder(params=params,
                                embedding=embedding,
-                               sos=params.sos,
-                               eos=params.eos,
+                               sos_id=sos_id,
+                               eos_id=eos_id,
+                               scope="attention_decoder",
                                dtype=dtype)
-    super().__init__(inputter=inputter,
-                     encoder=encoder,
-                     decoder=decoder,
-                     scope=scope,
-                     dtype=dtype,
-                     lifecycle_hooks=lifecycle_hooks,
-                     tensors_hooks=tensors_hooks)
+    super(AttentionModel, self).__init__(
+      embedding=embedding,
+      encoder=encoder,
+      decoder=decoder,
+      scope=scope,
+      dtype=dtype)
