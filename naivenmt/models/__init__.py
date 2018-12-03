@@ -18,9 +18,7 @@ from .attention_model import AttentionModel
 from .basic_model import BasicModel
 from .gnmt_model import GNMTModel
 from .seq2seq import Seq2SeqModel
-from .sequence_to_sequence import ModelInterface
-from .sequence_to_sequence import SequenceToSequence
 from .transformer import Transformer
 
-__all__ = ["BasicModel", "AttentionModel", "SequenceToSequence", "GNMTModel",
-           "ModelInterface", "Transformer", "AbstractModel", "Seq2SeqModel"]
+__all__ = ["BasicModel", "AttentionModel", "GNMTModel", "Transformer",
+           "AbstractModel", "Seq2SeqModel"]
