@@ -32,7 +32,7 @@ class GNMTEncoder(BasicEncoder):
       scope: variables scope
       dtype: variables dtype
     """
-    super(BasicEncoder, self).__init__(params, scope, dtype)
+    super(GNMTEncoder, self).__init__(params, scope, dtype)
 
   def encode(self, mode, sequence_inputs, sequence_length):
     if self.encoder_type in ["uni", "bi"]:
