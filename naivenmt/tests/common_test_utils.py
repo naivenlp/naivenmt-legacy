@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from naivenmt.configs import HParamsBuilder
 from naivenmt.embeddings import Embedding
-from naivenmt.encoders import BasicEncoder
+from naivenmt.encoders import BasicEncoder, GNMTEncoder
 
 
 def get_testdata_dir():
@@ -75,6 +75,24 @@ def get_basic_encode_results(update_configs):
   hparams = HParamsBuilder(configs).build()
   embedding = get_embedding(hparams)
   encoder = BasicEncoder(params=hparams)
+
+  inputs = embedding.encoder_embedding_input(
+    tf.constant([['Hello', 'World'], ['Hello', 'World'], ['Hello', '<PAD>']],
+                dtype=tf.string))
+
+  outputs, states = encoder.encode(
+    mode=tf.estimator.ModeKeys.TRAIN,
+    sequence_inputs=inputs,
+    sequence_length=tf.constant([2, 2, 1], dtype=tf.int32))
+  return outputs, states, hparams
+
+
+def get_gnmt_encode_results(update_configs):
+  configs = get_configs()
+  configs.update(update_configs)
+  hparams = HParamsBuilder(configs).build()
+  embedding = get_embedding(hparams)
+  encoder = GNMTEncoder(params=hparams)
 
   inputs = embedding.encoder_embedding_input(
     tf.constant([['Hello', 'World'], ['Hello', 'World'], ['Hello', '<PAD>']],
