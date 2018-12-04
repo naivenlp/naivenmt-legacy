@@ -13,40 +13,29 @@
 # limitations under the License.
 # ==============================================================================
 
-import os
-
 import tensorflow as tf
 
-from naivenmt.utils import get_dict_from_collection
-from naivenmt.utils import get_predictions
+from naivenmt.utils import collection_utils
+from naivenmt.utils import text_utils
 
 
 class SaveEvaluationPredictionsHook(tf.train.SessionRunHook):
   """Do evaluation and save prediction results to file."""
 
   def __init__(self,
-               out_dir,
+               output_file,
                eos="</s>",
-               subword_option="",
-               post_evaluation_fn=None):
-    """Init.
-
-    Args:
-      out_dir: model's dir
-      eos: eos of params
-      subword_option: subword options of params
-      post_evaluation_fn: a callback fn with signature (global_steps, predictions_file),
-        called after saving predictions
-    """
+               subword_option=""):
     self.eos = eos
     self.subword_option = subword_option
-    self.output_file = os.path.join(out_dir, "output_dev")
-    self.post_evaluation_fn = post_evaluation_fn
+    self.output_file = output_file
     self.predictions = None
     self.global_steps = None
+    self.output_path = None
 
   def begin(self):
-    self.predictions = get_dict_from_collection("predictions")
+    self.predictions = collection_utils.get_dict_from_collection(
+      name=collection_utils.PREDICTIONS)
     self.global_steps = tf.train.get_global_step()
 
   def before_run(self, run_context):
@@ -59,11 +48,13 @@ class SaveEvaluationPredictionsHook(tf.train.SessionRunHook):
   def after_run(self,
                 run_context,  # pylint: disable=unused-argument
                 run_values):
-    predictions, self.global_steps = run_values.results
-    self.output_file = self.output_file + "." + self.global_steps
-    predictions = get_predictions(predictions, self.eos, self.subword_option)
+    predictions, global_steps = run_values.results
+    predictions = text_utils.get_predictions(
+      predictions, self.eos, self.subword_option)
 
-    with open(self.output_file, mode="a", encoding="utf8") as f:
+    self.output_path = "{}.{}".format(self.output_file, global_steps)
+
+    with open(self.output_path, mode="a", encoding="utf8") as f:
       if isinstance(predictions, str):
         f.write(predictions + "\n")
       elif isinstance(predictions, list):
@@ -71,6 +62,6 @@ class SaveEvaluationPredictionsHook(tf.train.SessionRunHook):
           f.write(p + "\n")
 
   def end(self, session):
-    tf.logging.info("Evaluation predictions saved to %s" % self.output_file)
+    tf.logging.info("Evaluation predictions saved to %s" % self.output_path)
     if self.post_evaluation_fn:
-      self.post_evaluation_fn(self.global_steps, self.output_file)
+      self.post_evaluation_fn(self.global_steps, self.output_path)

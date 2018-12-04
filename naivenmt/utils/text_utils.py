@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import collections
+from naivenmt.utils import constants
 
 
 def get_predictions(predictions, tgt_eos, subword_option):
@@ -31,7 +32,7 @@ def get_predictions(predictions, tgt_eos, subword_option):
     tgt_eos = tgt_eos.encode("utf8")
 
   # Select first sentence
-  output = predictions["words"]
+  output = predictions[constants.PREDICTIONS_STRINGS]
   output = output[0, :].to_list()
 
   if tgt_eos and tgt_eos in output:

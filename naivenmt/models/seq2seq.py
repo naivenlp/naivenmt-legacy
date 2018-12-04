@@ -17,6 +17,8 @@ import tensorflow as tf
 from tensorflow.python.ops import lookup_ops
 
 from naivenmt.models.abstract_model import AbstractModel
+from naivenmt.utils import collection_utils
+from naivenmt.utils import constants
 from naivenmt.utils import dataset_utils
 from naivenmt.utils import learning_rate_utils as lr_utils
 
@@ -39,8 +41,8 @@ class Seq2SeqModel(AbstractModel):
     return dataset_utils.build_dataset(params, mode)
 
   def model_fn(self, features, labels, mode, params, config=None):
-    src = features['inputs']
-    src_len = features['inputs_length']
+    src = features[constants.FEATURES_INPUTS]
+    src_len = features[constants.FEATURES_INPUTS_LENGTH]
 
     with tf.variable_scope(self.scope):
       # embedding source sequence
@@ -53,9 +55,11 @@ class Seq2SeqModel(AbstractModel):
         enc_outputs = tf.transpose(enc_outputs, perm=[1, 0, 2])
 
       # embedding target sequence
-      labels_in = self.embedding.decoder_embedding_input(labels['tgt_in'])
-      labels_len = labels['tgt_len']
-      labels_out = self.embedding.decoder_embedding_input(labels['tgt_out'])
+      labels_in = self.embedding.decoder_embedding_input(
+        labels[constants.LABELS_INPUTS])
+      labels_len = labels[constants.LABELS_OUTPUTS_LENGTH]
+      labels_out = self.embedding.decoder_embedding_input(
+        labels[constants.LABELS_OUTPUTS])
       new_labels = {
         "tgt_in": labels_in,
         "tgt_out": labels_out,
@@ -68,6 +72,9 @@ class Seq2SeqModel(AbstractModel):
 
       if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = self.build_predictions(predict_ids, params)
+        collection_utils.add_dict_to_collection(
+          name=collection_utils.PREDICTIONS,
+          tensors_dict=predictions)
         key = tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
         export_outputs = {
           key: predictions
@@ -106,8 +113,8 @@ class Seq2SeqModel(AbstractModel):
       params.target_vocab_file, default_value=params.unk)
     predict_tgt = tgt_idx2str.lookup(tf.cast(predict_ids, tf.int64))
     predictions = {
-      "predict_ids": predict_ids,
-      "predict_strings": predict_tgt
+      constants.PREDICTIONS_IDS: predict_ids,
+      constants.PREDICTIONS_STRINGS: predict_tgt
     }
     return predictions
 

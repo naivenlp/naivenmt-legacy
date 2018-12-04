@@ -13,32 +13,12 @@
 # limitations under the License.
 # ==============================================================================
 
+PREDICTIONS_IDS = "predict_ids"
+PREDICTIONS_STRINGS = "predict_strings"
 
-import tensorflow as tf
+FEATURES_INPUTS = "inputs"
+FEATURES_INPUTS_LENGTH = "inputs_length"
 
-ITERATOR = "iterator"
-PREDICTIONS = "predictions"
-
-
-def add_dict_to_collection(name, tensors_dict):
-  keys = name + "_keys"
-  values = name + "_values"
-  for k, v in tensors_dict:
-    tf.add_to_collection(keys, k)
-    tf.add_to_collection(values, v)
-
-
-def get_dict_from_collection(name):
-  keys = name + "_keys"
-  values = name + "_values"
-  keys = tf.get_collection(keys)
-  values = tf.get_collection(values)
-  return dict(zip(keys, values))
-
-
-def add_to_collection(name, tensor):
-  tf.add_to_collection(name, tensor)
-
-
-def get_from_collection(name):
-  return tf.get_collection(name)
+LABELS_INPUTS = "tgt_in"
+LABELS_OUTPUTS = "tgt_out"
+LABELS_OUTPUTS_LENGTH = "tgt_len"

@@ -14,7 +14,9 @@
 # ==============================================================================
 
 import tensorflow as tf
+
 from naivenmt.utils import collection_utils
+from naivenmt.utils import constants
 
 
 def build_dataset(params, mode):
@@ -51,13 +53,13 @@ def build_train_or_eval_dataset(src_file, tgt_file, params):
   # build (features, labels) tuple from input fn
   src, tgt_in, tgt_out, src_len, tgt_len = iterator.get_next()
   features = {
-    "inputs": src,
-    "inputs_length": src_len
+    constants.FEATURES_INPUTS: src,
+    constants.FEATURES_INPUTS_LENGTH: src_len
   }
   labels = {
-    "tgt_in": tgt_in,
-    "tgt_out": tgt_out,
-    "tgt_len": tgt_len
+    constants.LABELS_INPUTS: tgt_in,
+    constants.LABELS_OUTPUTS: tgt_out,
+    constants.LABELS_OUTPUTS_LENGTH: tgt_len
   }
 
   return features, labels
@@ -100,8 +102,8 @@ def build_predict_dataset(params):
   tf.add_to_collection(collection_utils.ITERATOR, iterator.initializer)
   src, src_len = iterator.get_next()
   features = {
-    "inputs": src,
-    "inputs_length": src_len
+    constants.FEATURES_INPUTS: src,
+    constants.FEATURES_INPUTS_LENGTH: src_len
   }
 
   return features, None
