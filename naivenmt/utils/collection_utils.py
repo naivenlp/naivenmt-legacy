@@ -16,6 +16,8 @@
 
 import tensorflow as tf
 
+ITERATOR = "iterator"
+
 
 def add_dict_to_collection(name, tensors_dict):
   keys = name + "_keys"

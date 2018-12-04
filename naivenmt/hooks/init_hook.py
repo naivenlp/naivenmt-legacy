@@ -13,12 +13,17 @@
 # limitations under the License.
 # ==============================================================================
 
-from .ckpt_log_listener import CkptLoggingListener
-from .eval_hooks import SaveEvaluationPredictionsHook
-from .init_hook import InitHook
-from .params_hooks import CountParamsHook
+import tensorflow as tf
 
-__all__ = ["CountParamsHook",
-           "CkptLoggingListener",
-           "SaveEvaluationPredictionsHook",
-           "InitHook"]
+from naivenmt.utils import collection_utils
+
+
+class InitHook(tf.train.SessionRunHook):
+
+  def after_create_session(self, session, coord):
+    iterator_init_op = tf.get_collection(collection_utils.ITERATOR)
+    tables_init_op = tf.get_collection(tf.GraphKeys.TABLE_INITIALIZERS)
+    variables_init_op = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+    session.run(iterator_init_op)
+    session.run(tables_init_op)
+    session.run(variables_init_op)

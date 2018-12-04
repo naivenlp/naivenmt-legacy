@@ -14,6 +14,7 @@
 # ==============================================================================
 
 import tensorflow as tf
+from naivenmt.utils import collection_utils
 
 
 def build_dataset(params, mode):
@@ -45,7 +46,8 @@ def build_train_or_eval_dataset(src_file, tgt_file, params):
     num_parallel_calls=params.num_parallel_calls,
     buffer_size=params.buff_size,
     skip_count=params.skip_count)
-  iterator = dataset.make_one_shot_iterator()
+  iterator = dataset.make_initializable_iterator()
+  tf.add_to_collection(collection_utils.ITERATOR, iterator.initializer)
   # build (features, labels) tuple from input fn
   src, tgt_in, tgt_out, src_len, tgt_len = iterator.get_next()
   features = {
@@ -94,7 +96,8 @@ def build_predict_dataset(params):
       params.eos,
       0))
 
-  iterator = dataset.make_one_shot_iterator()
+  iterator = dataset.make_initializable_iterator()
+  tf.add_to_collection(collection_utils.ITERATOR, iterator.initializer)
   src, src_len = iterator.get_next()
   features = {
     "inputs": src,
