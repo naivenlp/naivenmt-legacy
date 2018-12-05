@@ -68,7 +68,7 @@ class AbstractEncoder(EncoderInterface):
     num_layers = self.num_encoder_layers
     num_residual_layers = self.num_encoder_residual_layers
 
-    with tf.variable_scope(self.scope, dtype=self.dtype):
+    with tf.variable_scope(self.scope, dtype=self.dtype, reuse=tf.AUTO_REUSE):
       if self.time_major:
         sequence_inputs = tf.transpose(sequence_inputs, perm=[1, 0, 2])
 
@@ -98,14 +98,14 @@ class AbstractEncoder(EncoderInterface):
           time_major=self.time_major,
           swap_memory=True)
         encoder_outputs = tf.concat(bi_outputs, -1)
-        if num_bi_layers == 1:
-          encoder_state = bi_encoder_state
-        else:
-          encoder_state = []
-          for layer_id in range(num_bi_layers):
-            encoder_state.append(bi_encoder_state[0][layer_id])
-            encoder_state.append(bi_encoder_state[1][layer_id])
-          encoder_state = tuple(encoder_state)
+        # if num_bi_layers == 1:
+        #   encoder_state = bi_encoder_state
+        # else:
+        encoder_state = []
+        for layer_id in range(num_bi_layers):
+          encoder_state.append(bi_encoder_state[0][layer_id])
+          encoder_state.append(bi_encoder_state[1][layer_id])
+        encoder_state = tuple(encoder_state)
       else:
         raise ValueError("Invalid encoder type: %s" % self.encoder_type)
       return encoder_outputs, encoder_state

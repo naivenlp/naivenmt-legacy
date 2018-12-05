@@ -116,7 +116,8 @@ class Embedding(EmbeddingInterface):
         "Can't set num_partitions > 1 when using pretrained embedding")
 
     with tf.variable_scope(self.scope, dtype=self.dtype,
-                           partitioner=partitioner) as scope:
+                           partitioner=partitioner,
+                           reuse=tf.AUTO_REUSE) as scope:
       self._encoder_embedding = self._create_or_load_embeddings(
         name="encoder_embedding",
         vocab_file=self.src_vocab_file,
