@@ -24,6 +24,7 @@ class HParamsBuilder(object):
     self._check_vocab_files()
     self._gen_metrics_dirs()
     self._check_model_params()
+    self._check_log_params()
 
     # convert dict to hparams
     for k, v in self.configs.items():
@@ -33,6 +34,21 @@ class HParamsBuilder(object):
       except Exception as e:
         self._hparams.add_hparam(k, v)
     return self._hparams
+
+  def _check_log_params(self):
+    """Check params about logging information during training or eval."""
+    steps_per_stats = self.configs['steps_per_stats']
+    if not steps_per_stats or steps_per_stats < 0:
+      steps_per_stats = 100
+    steps_per_eval = self.configs['steps_per_eval']
+    if not steps_per_eval:
+      steps_per_eval = 10 * steps_per_stats
+    steps_per_external_eval = self.configs['steps_per_external_eval']
+    if not steps_per_external_eval:
+      steps_per_external_eval = 5 * steps_per_eval
+    self.configs['steps_per_stats'] = steps_per_stats
+    self.configs['steps_per_eval'] = steps_per_eval
+    self.configs['steps_per_external_eval'] = steps_per_external_eval
 
   def _check_model_params(self):
     """Check neural network's parameters."""
@@ -139,9 +155,9 @@ class HParamsBuilder(object):
 
     if self.configs['embed_prefix']:
       self.configs['source_embed_file'] = (
-          self.configs['embed_prefix'] + "." + self.configs['src'])
+              self.configs['embed_prefix'] + "." + self.configs['src'])
       self.configs['target_embed_file'] = (
-          self.configs['embed_prefix'] + "." + self.configs['tgt'])
+              self.configs['embed_prefix'] + "." + self.configs['tgt'])
     else:
       self.configs['source_embed_file'] = None
       self.configs['target_embed_file'] = None
@@ -229,7 +245,13 @@ class HParamsBuilder(object):
       "pass_hidden_state": True,
       "optimizer": "sgd",
       "learning_rate": 1.0,
-      "subword_option": ""
+      "subword_option": "",
+      "log_device_placement": False,
+      "train_steps": 1000000,
+      "steps_per_stats": 100,
+      "steps_per_external_eval": 500,
+      "steps_per_eval": 100,
+      "average_ckpts": False
     }
 
   @staticmethod
