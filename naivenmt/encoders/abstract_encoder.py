@@ -101,11 +101,12 @@ class AbstractEncoder(EncoderInterface):
         # if num_bi_layers == 1:
         #   encoder_state = bi_encoder_state
         # else:
-        encoder_state = []
-        for layer_id in range(num_bi_layers):
-          encoder_state.append(bi_encoder_state[0][layer_id])
-          encoder_state.append(bi_encoder_state[1][layer_id])
-        encoder_state = tuple(encoder_state)
+        # encoder_state = []
+        # for layer_id in range(num_bi_layers):
+        #   encoder_state.append(bi_encoder_state[0][layer_id])
+        #   encoder_state.append(bi_encoder_state[1][layer_id])
+        # encoder_state = tuple(encoder_state)
+        encoder_state = bi_encoder_state  # (states_fw, states_bw)
       else:
         raise ValueError("Invalid encoder type: %s" % self.encoder_type)
       return encoder_outputs, encoder_state

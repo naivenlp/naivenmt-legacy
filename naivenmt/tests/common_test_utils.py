@@ -15,11 +15,16 @@
 
 import os
 
+import numpy as np
 import tensorflow as tf
 
 from naivenmt.configs import HParamsBuilder
 from naivenmt.embeddings import Embedding
 from naivenmt.encoders import BasicEncoder, GNMTEncoder
+
+BATCH_SIZE = 8
+TIME_STEPS = 5
+DEPTH = 4
 
 
 def get_testdata_dir():
@@ -41,13 +46,13 @@ def get_file_path(module, file):
   return os.path.abspath(os.path.join(naivenmt_dir, module, file))
 
 
-def get_configs():
+def get_default_test_configs():
   return {
     "num_encoder_layers": 2,
     "num_encoder_residual_layers": 1,
     "encoder_type": "bi",
     "unit_type": "gru",
-    "num_units": 256,
+    "num_units": 4,
     "forget_bias": 1.0,
     "dropout": 0.5,
     "time_major": True,
@@ -57,6 +62,34 @@ def get_configs():
     "target_embedding_size": 4,
     "share_vocab": False
   }
+
+
+def get_test_configs(update_configs):
+  default_configs = get_default_test_configs()
+  default_configs.update(update_configs)
+  return default_configs
+
+
+def get_params(update_configs):
+  configs = get_test_configs(update_configs)
+  hparams = HParamsBuilder(configs).build()
+  return hparams
+
+
+def get_encoder_test_inputs():
+  inputs = np.array([
+    [[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7], [5, 6, 7, 8]],
+    [[2, 3, 1, 4], [3, 4, 5, 1], [6, 8, 2, 5], [2, 4, 6, 7], [0, 0, 0, 0]],
+    [[3, 5, 6, 7], [1, 2, 8, 5], [4, 5, 6, 3], [2, 3, 4, 5], [1, 2, 6, 7]],
+    [[2, 3, 9, 5], [5, 7, 2, 1], [6, 2, 3, 8], [0, 0, 0, 0], [0, 0, 0, 0]],
+    [[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6], [4, 5, 6, 7], [5, 6, 7, 8]],
+    [[2, 3, 1, 4], [3, 4, 5, 1], [6, 8, 2, 5], [2, 4, 6, 7], [0, 0, 0, 0]],
+    [[3, 5, 6, 7], [1, 2, 8, 5], [4, 5, 6, 3], [2, 3, 4, 5], [1, 2, 6, 7]],
+    [[2, 3, 9, 5], [5, 7, 2, 1], [6, 2, 3, 8], [0, 0, 0, 0], [0, 0, 0, 0]],
+  ], dtype=tf.float32.as_numpy_dtype)
+  inputs_length = np.array([5, 4, 5, 3, 5, 4, 5, 3],
+                           dtype=tf.int32.as_numpy_dtype)
+  return inputs, inputs_length
 
 
 def get_embedding(hparams):
@@ -70,7 +103,7 @@ def get_embedding(hparams):
 
 
 def get_basic_encode_results(update_configs):
-  configs = get_configs()
+  configs = get_default_test_configs()
   configs.update(update_configs)
   hparams = HParamsBuilder(configs).build()
   embedding = get_embedding(hparams)
@@ -88,7 +121,7 @@ def get_basic_encode_results(update_configs):
 
 
 def get_gnmt_encode_results(update_configs):
-  configs = get_configs()
+  configs = get_default_test_configs()
   configs.update(update_configs)
   hparams = HParamsBuilder(configs).build()
   embedding = get_embedding(hparams)
