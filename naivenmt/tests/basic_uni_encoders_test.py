@@ -117,86 +117,51 @@ class BasicUniEncodersTest(tf.test.TestCase):
         states_h.shape)
 
   def testBasicLSTMEncoder(self):
-    configs = {
-      "unit_type": "lstm",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_2,
-      "forget_bias": 1.0,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runLSTMEncoder(encoder, NUM_LAYERS_2)
-
-    configs = {
-      "unit_type": "lstm",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_4,
-      "forget_bias": 1.0,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runLSTMEncoder(encoder, NUM_LAYERS_4)
+    for num_layers in [NUM_LAYERS_2, NUM_LAYERS_4]:
+      configs = {
+        "unit_type": "lstm",
+        "encoder_type": "uni",
+        "num_encoder_layers": num_layers,
+        "forget_bias": 1.0,
+        "time_major": True
+      }
+      encoder = BasicEncoder(params=common_utils.get_params(configs))
+      self.runLSTMEncoder(encoder, num_layers)
 
   def testBasicLayerNormLSTMEncoder(self):
-    configs = {
-      "unit_type": "layer_norm_lstm",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_2,
-      "forget_bias": 1.0,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runLSTMEncoder(encoder, NUM_LAYERS_2)
-
-    configs = {
-      "unit_type": "layer_norm_lstm",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_4,
-      "forget_bias": 1.0,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runLSTMEncoder(encoder, NUM_LAYERS_4)
+    for num_layers in [NUM_LAYERS_2, NUM_LAYERS_4]:
+      configs = {
+        "unit_type": "layer_norm_lstm",
+        "encoder_type": "uni",
+        "num_encoder_layers": num_layers,
+        "forget_bias": 1.0,
+        "time_major": True
+      }
+      encoder = BasicEncoder(params=common_utils.get_params(configs))
+      self.runLSTMEncoder(encoder, num_layers)
 
   def testBasicNASEncoder(self):
-    configs = {
-      "unit_type": "nas",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_2,
-      "forget_bias": 1.0,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runLSTMEncoder(encoder, NUM_LAYERS_2)
-
-    configs = {
-      "unit_type": "nas",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_4,
-      "forget_bias": 1.0,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runLSTMEncoder(encoder, NUM_LAYERS_4)
+    for num_layers in [NUM_LAYERS_2, NUM_LAYERS_4]:
+      configs = {
+        "unit_type": "nas",
+        "encoder_type": "uni",
+        "num_encoder_layers": num_layers,
+        "forget_bias": 1.0,
+        "time_major": True
+      }
+      encoder = BasicEncoder(params=common_utils.get_params(configs))
+      self.runLSTMEncoder(encoder, num_layers)
 
   def testBasicGRUEncoder(self):
-    configs = {
-      "unit_type": "gru",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_2,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runGRUEncoder(encoder, NUM_LAYERS_2)
-
-    configs = {
-      "unit_type": "gru",
-      "encoder_type": "uni",
-      "num_encoder_layers": NUM_LAYERS_4,
-      "time_major": True
-    }
-    encoder = BasicEncoder(params=common_utils.get_params(configs))
-    self.runGRUEncoder(encoder, NUM_LAYERS_4)
+    for num_layers in [NUM_LAYERS_2, NUM_LAYERS_4]:
+      configs = {
+        "unit_type": "gru",
+        "encoder_type": "uni",
+        "num_encoder_layers": num_layers,
+        "time_major": True
+      }
+      encoder = BasicEncoder(params=common_utils.get_params(configs))
+      self.runGRUEncoder(encoder, num_layers)
 
 
 if __name__ == "__main__":
