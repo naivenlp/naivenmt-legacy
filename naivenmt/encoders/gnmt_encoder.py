@@ -45,7 +45,7 @@ class GNMTEncoder(BasicEncoder):
     num_bi_layers = 1
     num_uni_layers = self.num_encoder_layers - num_bi_layers
 
-    with tf.variable_scope(self.scope, dtype=self.dtype):
+    with tf.variable_scope(self.scope, dtype=self.dtype, reuse=tf.AUTO_REUSE):
       if self.time_major:
         sequence_inputs = tf.transpose(sequence_inputs, perm=[1, 0, 2])
 
@@ -62,6 +62,9 @@ class GNMTEncoder(BasicEncoder):
         sequence_length=sequence_length,
         time_major=self.time_major,
         swap_memory=True)
+      bi_encoder_outputs = tf.concat(bi_encoder_outputs, -1)
+      # bw states shape(lstm layer_norm_lstm, nas): (states_c, states_h)
+      encoder_states_bw = bi_encoder_state[1]
 
       # build unidirectional layers
       uni_cell = self._build_encoder_cell(
@@ -76,7 +79,8 @@ class GNMTEncoder(BasicEncoder):
         sequence_length=sequence_length,
         time_major=self.time_major)
 
-      encoder_state = (bi_encoder_state[1],) + (
-        (encoder_state,) if num_uni_layers == 1 else encoder_state)
+      if num_uni_layers == 1:
+        # shape: ((encoder_states_bw,), (encoder_states,))
+        encoder_state = (encoder_states_bw,) + (encoder_state,)
 
     return encoder_outputs, encoder_state
