@@ -17,6 +17,7 @@ import tensorflow as tf
 
 from naivenmt.configs import HParamsBuilder
 from naivenmt.utils import dataset_utils
+from naivenmt.utils import collection_utils
 
 
 class DatasetUtilsTest(tf.test.TestCase):
@@ -39,6 +40,10 @@ class DatasetUtilsTest(tf.test.TestCase):
     features, labels = dataset_utils.build_dataset(
       hparams, tf.estimator.ModeKeys.TRAIN)
     with self.test_session() as sess:
+      sess.run(tf.global_variables_initializer())
+      sess.run(tf.tables_initializer())
+      iterator_init_op = tf.get_collection(collection_utils.ITERATOR)
+      sess.run(iterator_init_op)
       for _ in range(5):
         print(sess.run(features['inputs']))
         print(sess.run(labels['tgt_in']))
