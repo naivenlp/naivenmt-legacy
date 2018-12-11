@@ -28,7 +28,7 @@ class BasicDecoder(AbstractDecoder):
                eos_id,
                scope="basic_decoder",
                dtype=tf.float32):
-    super(AbstractDecoder, self).__init__(
+    super(BasicDecoder, self).__init__(
       params=params,
       embedding=embedding,
       sos_id=sos_id,
@@ -52,7 +52,7 @@ class BasicDecoder(AbstractDecoder):
                           source_sequence_length):
     cells = self._create_rnn_cell(mode)
     if (mode == tf.estimator.ModeKeys.PREDICT and
-        self.infer_mode == "beam_search"):
+            self.infer_mode == "beam_search"):
       decoder_initial_state = tf.contrib.seq2seq.tile_batch(
         encoder_state, multiplier=self.beam_width)
     else:
@@ -86,7 +86,7 @@ class BasicDecoder(AbstractDecoder):
     dropout = dropout if mode == tf.estimator.ModeKeys.TRAIN else 0.0
 
     if unit_type == "lstm":
-      single_cell = tf.nn.rnn_cell.BasicLSTMCell(
+      single_cell = tf.nn.rnn_cell.LSTMCell(
         num_units, forget_bias=forget_bias)
     elif unit_type == "gru":
       single_cell = tf.nn.rnn_cell.GRUCell(num_units)
