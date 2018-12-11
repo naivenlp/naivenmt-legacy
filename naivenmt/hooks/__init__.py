@@ -13,12 +13,10 @@
 # limitations under the License.
 # ==============================================================================
 
-from .ckpt_log_listener import CkptLoggingListener
 from .eval_hooks import SaveEvaluationPredictionsHook
 from .init_hook import InitHook
 from .params_hooks import CountParamsHook
 
 __all__ = ["CountParamsHook",
-           "CkptLoggingListener",
            "SaveEvaluationPredictionsHook",
            "InitHook"]

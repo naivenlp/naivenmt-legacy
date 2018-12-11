@@ -63,5 +63,3 @@ class SaveEvaluationPredictionsHook(tf.train.SessionRunHook):
 
   def end(self, session):
     tf.logging.info("Evaluation predictions saved to %s" % self.output_path)
-    if self.post_evaluation_fn:
-      self.post_evaluation_fn(self.global_steps, self.output_path)
