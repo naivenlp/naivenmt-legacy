@@ -72,7 +72,7 @@ class BasicDecoder(AbstractDecoder):
         residual_connection=res,
         residual_fn=residual_fn)
       cells.append(cell)
-    cells = cells[0] if len(cells) == 1 else cells
+    # cells = cells[0] if len(cells) == 1 else cells
     return tf.contrib.rnn.MultiRNNCell(cells)
 
   @staticmethod

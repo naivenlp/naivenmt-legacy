@@ -76,7 +76,8 @@ class AbstractDecoder(DecoderInterface):
     self.random_seed = params.random_seed
 
   def decode(self, mode, encoder_outputs, encoder_state, labels, src_seq_len):
-    with tf.variable_scope(self.scope, dtype=self.dtype) as scope:
+    with tf.variable_scope(self.scope, dtype=self.dtype,
+                           reuse=tf.AUTO_REUSE) as scope:
       cell, decoder_initial_state = self._build_decoder_cell(
         mode=mode,
         encoder_outputs=encoder_outputs,

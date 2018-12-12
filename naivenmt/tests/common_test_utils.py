@@ -56,7 +56,7 @@ def get_default_test_configs():
     "length_penalty_weight": 0,
     "encoder_type": "bi",
     "unit_type": "gru",
-    "num_units": 4,
+    "num_units": DEPTH,
     "forget_bias": 1.0,
     "dropout": 0.5,
     "time_major": True,
@@ -179,7 +179,7 @@ def get_uni_lstm_encoder_results(num_layers):
   states_h = get_random_states(num_layers)
   states = []
   for c, h in zip(states_c, states_h):
-    states.append((c, h))
+    states.append(tf.nn.rnn_cell.LSTMStateTuple(c, h))
   states = tuple(states)
   return outputs, outputs_length, states
 
