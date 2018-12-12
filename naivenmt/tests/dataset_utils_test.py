@@ -44,6 +44,16 @@ class DatasetUtilsTest(tf.test.TestCase):
       sess.run(tf.tables_initializer())
       iterator_init_op = tf.get_collection(collection_utils.ITERATOR)
       sess.run(iterator_init_op)
+
+      tgt_in, tgt_out, tgt_len = sess.run(
+        [labels['tgt_in'], labels['tgt_out'], labels['tgt_len']])
+
+      self.assertEqual(4, tgt_in.shape[0])
+      self.assertEqual(4, tgt_out.shape[0])
+      print(tgt_in.shape)
+      print(tgt_out.shape)
+      print(tgt_len.shape)
+
       for _ in range(5):
         print(sess.run(features['inputs']))
         print(sess.run(labels['tgt_in']))

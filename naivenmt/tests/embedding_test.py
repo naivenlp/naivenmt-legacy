@@ -18,6 +18,7 @@ import tensorflow as tf
 from naivenmt.configs import HParamsBuilder
 from naivenmt.embeddings import Embedding
 from naivenmt.tests import common_test_utils as common_utils
+from naivenmt.utils import collection_utils
 from naivenmt.utils import dataset_utils
 
 TEST_DATA_DIR = common_utils.get_testdata_dir()
@@ -118,7 +119,7 @@ class EmbeddingTest(tf.test.TestCase):
       "num_parallel_calls": 4,
       "buff_size": 1024,
       "skip_count": 0,
-      "batch_size": 4,
+      "batch_size": 8,
       "source_embedding_size": 4,
       "target_embedding_size": 4
     }
@@ -135,15 +136,27 @@ class EmbeddingTest(tf.test.TestCase):
       hparams,
       tf.estimator.ModeKeys.TRAIN)
     features_embedding = embedding.encoder_embedding_input(features['inputs'])
+    tgt_in = embedding.decoder_embedding_input(labels['tgt_in'])
+    tgt_out = embedding.decoder_embedding_input(labels['tgt_out'])
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
       sess.run(tf.tables_initializer())
+      iterator_init_op = tf.get_collection(collection_utils.ITERATOR)
+      sess.run(iterator_init_op)
       print(sess.run(features_embedding))
       self.assertEqual(3, sess.run(tf.rank(features_embedding)))
       self.assertEqual(hparams.batch_size,
                        sess.run(tf.shape(features_embedding))[0])
       self.assertEqual(hparams.source_embedding_size,
                        sess.run(tf.shape(features_embedding))[2])
+
+      tgt_in, tgt_out = sess.run([tgt_in, tgt_out])
+      self.assertEqual(8, tgt_in.shape[0])
+      self.assertEqual(4, tgt_in.shape[2])
+      self.assertEqual(8, tgt_out.shape[0])
+      self.assertEqual(4, tgt_out.shape[2])
+      print(tgt_in.shape)
+      print(tgt_out.shape)
 
 
 if __name__ == "__main__":
