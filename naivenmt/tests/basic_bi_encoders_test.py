@@ -42,24 +42,16 @@ class BasicBiEncodersTest(tf.test.TestCase):
       mode=tf.estimator.ModeKeys.TRAIN,
       sequence_inputs=inputs_ph,
       sequence_length=inputs_length_ph)
-    # len(states) is always 2, containing forward and backward states
-    self.assertEqual(2, len(states))
 
-    # convert states tuple to tensor
-    states_fw, states_bw = [], []
-    # num_bi_layers = num_layers//2 for 'bi' mode
-    for i in range(num_layers // 2):
-      states_fw.append(states[0][i])
-      states_bw.append(states[0][i])
-    # states shape: (num_layers, batch_size, depth)
-    states_fw = tf.convert_to_tensor(states_fw)
-    states_bw = tf.convert_to_tensor(states_bw)
+    self.assertEqual(num_layers, len(states))
+
+    states = tf.convert_to_tensor(states)
 
     inputs, inputs_length = common_utils.get_encoder_test_inputs()
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
-      outputs, states_fw, states_bw = sess.run(
-        [outputs, states_fw, states_bw],
+      outputs, states = sess.run(
+        [outputs, states],
         feed_dict={
           inputs_ph: inputs,
           inputs_length_ph: inputs_length
@@ -70,13 +62,10 @@ class BasicBiEncodersTest(tf.test.TestCase):
         [common_utils.TIME_STEPS, common_utils.BATCH_SIZE,
          common_utils.DEPTH * 2],
         outputs.shape)
-      # num_bi_layers = num_layers//2 for 'bi' mode
+
       self.assertAllEqual(
-        [num_layers // 2, common_utils.BATCH_SIZE, common_utils.DEPTH],
-        states_fw.shape)
-      self.assertAllEqual(
-        [num_layers // 2, common_utils.BATCH_SIZE, common_utils.DEPTH],
-        states_bw.shape)
+        [num_layers, common_utils.BATCH_SIZE, common_utils.DEPTH],
+        states.shape)
 
   def runLSTMEncoder(self, encoder, num_layers):
     """Test LSTM, LayerNormLSTM and NAS cell outputs and states. time_major=True
@@ -91,30 +80,21 @@ class BasicBiEncodersTest(tf.test.TestCase):
       shape=(None, common_utils.TIME_STEPS, common_utils.DEPTH))
     inputs_length_ph = tf.placeholder(dtype=tf.int32, shape=(None))
 
-    # states is a tuple of (states_fw, states_bw)
-    # states_fw is a tuple of (states_c, states_h) of length num_layers
+    # states is a tuple of (states_fw/states_bw) of length num_layers
     outputs, states = encoder.encode(
       mode=tf.estimator.ModeKeys.TRAIN,
       sequence_inputs=inputs_ph,
       sequence_length=inputs_length_ph)
-    # len(states) is always 2, containing forward and backward states
-    self.assertEqual(2, len(states))
 
-    # extract each layer's states_c and states_h
-    states_fw, states_bw = [], []
-    # num_bi_layers = num_layers//2 for 'bi' mode
-    for i in range(num_layers // 2):
-      states_fw.append(states[0][i])
-      states_bw.append(states[1][i])
-    # convert list to tensor
-    states_fw = tf.convert_to_tensor(states_fw)
-    states_bw = tf.convert_to_tensor(states_bw)
+    self.assertEqual(num_layers, len(states))
+
+    states = tf.convert_to_tensor(states)
 
     inputs, inputs_length = common_utils.get_encoder_test_inputs()
     with self.test_session() as sess:
       sess.run(tf.global_variables_initializer())
-      outputs, states, states_fw, states_bw = sess.run(
-        [outputs, states, states_fw, states_bw],
+      outputs, states = sess.run(
+        [outputs, states],
         feed_dict={
           inputs_ph: inputs,
           inputs_length_ph: inputs_length
@@ -124,14 +104,10 @@ class BasicBiEncodersTest(tf.test.TestCase):
         [common_utils.TIME_STEPS, common_utils.BATCH_SIZE,
          common_utils.DEPTH * 2],
         outputs.shape)
-      # states_fw shape: (num_layers, 2, batch_size, depth), 2 means fw and bw.
+      # states shape: (num_layers, 2, batch_size, depth), 2 means c and h.
       self.assertAllEqual(
-        [num_layers // 2, 2, common_utils.BATCH_SIZE, common_utils.DEPTH],
-        states_fw.shape)
-      # states_bw shape: (num_layers, 2, batch_size, depth), 2 means fw and bw.
-      self.assertAllEqual(
-        [num_layers // 2, 2, common_utils.BATCH_SIZE, common_utils.DEPTH],
-        states_bw.shape)
+        [num_layers, 2, common_utils.BATCH_SIZE, common_utils.DEPTH],
+        states.shape)
 
   def testBasicLSTMEncoder(self):
     for num_layers in [NUM_LAYERS_2, NUM_LAYERS_4]:
