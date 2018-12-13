@@ -64,7 +64,7 @@ class AbstractDecoder(DecoderInterface):
     self.scope = scope
     self.dtype = dtype
 
-    self.embedding = embedding
+    self.embedding = embedding.decoder_embedding
 
     self.time_major = params.time_major
     self.beam_width = params.beam_width
@@ -143,7 +143,7 @@ class AbstractDecoder(DecoderInterface):
 
         outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
           decoder=decoder,
-          max_iterations=max_iteration,
+          maximum_iterations=max_iteration,
           output_time_major=self.time_major,
           swap_memory=True,
           scope=scope)

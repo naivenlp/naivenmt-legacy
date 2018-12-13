@@ -197,3 +197,53 @@ def get_uni_gru_encoder_results(num_layers):
   states = get_random_states(num_layers)
   states = tuple(states)
   return outputs, outputs_length, states
+
+
+def get_bi_lstm_encoder_results(num_layers):
+  outputs, outputs_length = get_encoder_outputs()
+  # gen forward states
+  states_fw_c = get_random_states(num_layers // 2)
+  states_fw_h = get_random_states(num_layers // 2)
+  states_fw = []
+  for fw_c, fw_h in zip(states_fw_c, states_fw_h):
+    states_fw.append(tf.nn.rnn_cell.LSTMStateTuple(fw_c, fw_h))
+  states_fw = tuple(states_fw)
+  # gen backward states
+  states_bw_c = get_random_states(num_layers // 2)
+  states_bw_h = get_random_states(num_layers // 2)
+  states_bw = []
+  for bw_c, bw_h in zip(states_bw_c, states_bw_h):
+    states_bw.append(tf.nn.rnn_cell.LSTMStateTuple(bw_c, bw_h))
+  states_bw = tuple(states_bw)
+  # flatten states
+  states_list = []
+  for i in range(num_layers // 2):
+    states_list.append(states_fw[i])
+    states_list.append(states_bw[i])
+  states = tuple(states_list)
+  return outputs, outputs_length, states
+
+
+def get_bi_layer_norm_lstm_encoder_results(num_layers):
+  return get_bi_lstm_encoder_results(num_layers)
+
+
+def get_bi_nas_encoder_results(num_layers):
+  return get_bi_lstm_encoder_results(num_layers)
+
+
+def get_bi_gru_encoder_results(num_layers):
+  outputs, outputs_length = get_encoder_outputs()
+  # gen forward states
+  states_fw = get_random_states(num_layers // 2)
+  states_fw = tuple(states_fw)
+  # gen backward states
+  states_bw = get_random_states(num_layers // 2)
+  states_bw = tuple(states_bw)
+  # flatten states
+  states_list = []
+  for i in range(num_layers // 2):
+    states_list.append(states_fw[i])
+    states_list.append(states_bw[i])
+  states = tuple(states_list)
+  return outputs, outputs_length, states
