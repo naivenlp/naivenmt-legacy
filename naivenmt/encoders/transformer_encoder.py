@@ -13,32 +13,54 @@ class TransformerEncoder(EncoderInterface):
                num_heads=8,
                ffn_dim=2048,
                dropout=0.2,
-               dtype=None,
-               scope=None):
+               dtype=tf.float32,
+               scope="transformer-encoder"):
+    """Init.
+
+    Args:
+      embedding: word embedding layer
+      num_layers: A python integer, number of encoder layers
+      model_dim: A python integer, model dimension, the same as word embedding's dimension
+      num_heads: A python integer, number of heads
+      ffn_dim: A python integer, dimension of feed forward network
+      dropout: A python float, dropout rate
+      dtype: Data type, default is `tf.float32`
+      scope: A python string, variable scope
+    """
     self.embedding = embedding
     self.num_layers = num_layers
     self.model_dim = model_dim
     self.num_heads = num_heads
     self.ffn_dim = ffn_dim
     self.dropout = dropout
-    self.dtype = dtype or tf.float32
-    self.scope = scope or "encoder"
+    self.dtype = dtype
+    self.scope = scope
 
-  def encode(self, mode, features):
+  def encode(self, mode, sequence_inputs, sequence_length):
+    """Encode module.
+
+    Args:
+      mode: A python string, one of tf.estimator.ModeKeys
+      sequence_inputs: A tensor, input sequence, shape is [B, T, D]
+      sequence_length: A tensor, length of input, shape is [B]
+
+    Returns:
+      A output tensor and attentions list.
+    """
     self.dropout = self.dropout if mode == tf.estimator.ModeKeys.TRAIN else 0.0
     # max_sequence_length = max(self.max_seq_len, features.source_sequence_length)
 
     with tf.variable_scope(self.scope, dtype=self.dtype) as scope:
-      encoder_embedding_input = self.embedding.encoder_embedding_input(
-        features.source_ids)
-      encoder_embedding_input += transformer.positional_encoding(
-        encoder_embedding_input, self.model_dim)
+      # word embedding
+      # encoder_embedding_input = self.embedding.encoder_embedding_input(sequence_inputs)
+      # positional embedding
+      sequence_inputs += transformer.positional_encoding(
+        sequence_inputs, self.model_dim)
 
-      self_attention_mask = transformer.padding_mask(
-        features.source_ids, features.source_ids, self.num_heads)
+      self_attention_mask = transformer.padding_mask(sequence_inputs, sequence_inputs, self.num_heads)
 
       attentions = []
-      output = encoder_embedding_input
+      output = sequence_inputs
       for i in range(self.num_layers):
         output, attention = self.encoder_layer(output, self_attention_mask)
         attentions.append(attention)
