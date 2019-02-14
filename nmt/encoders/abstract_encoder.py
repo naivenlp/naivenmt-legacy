@@ -1,5 +1,7 @@
 import abc
 
+import tensorflow as tf
+
 
 class Encoder(abc.ABC):
     """Encoder input sequence."""
@@ -26,8 +28,10 @@ class Encoder(abc.ABC):
 class EmbeddingEncoder(Encoder):
     """Embedding input sequence and encode it to produce output and states tensor."""
 
-    def __init__(self, embedding):
+    def __init__(self, embedding, scope="encoder", dtype=tf.float32):
         self.embedding = embedding
+        self.scope = scope
+        self.dtype = dtype
 
     def encode(self, inputs, length, mode, params=None):
         raise NotImplementedError()
