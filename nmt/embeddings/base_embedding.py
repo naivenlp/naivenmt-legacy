@@ -17,10 +17,7 @@ class BaseEmbedding(Embedding):
 
     def embedding(self, inputs, length, params=None):
         default_params = self.default_config()
-        if not params:
-            params = default_params
-        else:
-            params = default_params.update(params)
+        params = default_params if not params else default_params.update(**params)
 
         self._check_vocab(params)
 
