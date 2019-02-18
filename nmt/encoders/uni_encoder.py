@@ -8,7 +8,9 @@ class UniRNNEncoder(EmbeddingEncoder):
 
     def encode(self, inputs, length, mode, params=None):
         default_params = self.default_config()
-        params = default_params if not params else default_params.update(**params)
+        if params:
+            default_params.update(**params)
+        params = default_params
 
         inputs = self.embedding.embedding(inputs, length, params)
         if params['time_major']:
