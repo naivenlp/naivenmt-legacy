@@ -12,17 +12,11 @@ class BasicRNNDecoder(EmbeddingDecoder):
             default_params.update(**params)
         params = default_params
 
+        if params['time_major']:
+            outputs = tf.transpose(outputs, perm=[1, 0, 2])
+
         with tf.variable_scope(self.scope, dtype=self.dtype, reuse=tf.AUTO_REUSE) as scope:
-            cell, initial_state = rnn_utils.build_decoder_rnn_cells(
-                states=states,
-                num_layers=params['num_decoder_layers'],
-                num_residual_layers=params['num_decoder_residual_layers'],
-                num_units=params['num_units'],
-                unit_type=params['unit_type'],
-                beam_width=params['beam_width'],
-                dropout=params['dropout'],
-                forget_bias=params['forget_bias'],
-                residual_fn=None)
+            cell, initial_state = self._build_cell_and_initial_state(outputs, states, params)
 
             if mode != tf.estimator.ModeKeys.PREDICT:
                 helper = tf.contrib.seq2seq.TrainingHelper(
@@ -52,7 +46,27 @@ class BasicRNNDecoder(EmbeddingDecoder):
             sample_id = outputs.sample_id
             return logits, sample_id, final_context_state
 
+    def _build_cell_and_initial_state(self, encoder_output, encoder_state, params):
+        cell, initial_state = rnn_utils.build_decoder_rnn_cells(
+            states=encoder_state,
+            num_layers=params['num_decoder_layers'],
+            num_residual_layers=params['num_decoder_residual_layers'],
+            num_units=params['num_units'],
+            unit_type=params['unit_type'],
+            beam_width=params['beam_width'],
+            dropout=params['dropout'],
+            forget_bias=params['forget_bias'],
+            residual_fn=None)
+        return cell, initial_state
+
     def _build_decoder(self, cell, initial_state, params):
+        if params['beam_width'] > 0:
+            return self._build_beam_decoder(cell, initial_state, params)
+        if params['sampling_temperature'] > 0.0:
+            return self._build_sampling_decoder(cell, initial_state, params)
+        return self._build_greedy_decoder(cell, initial_state, params)
+
+    def _build_greedy_decoder(self, cell, initial_state, params):
         sos_id = tf.constant(value=params['sos_id'], dtype=tf.int32)
         start_tokens = tf.fill([params['infer_batch_size']], sos_id)
         end_token = tf.constant(value=params['eos_id'], dtype=tf.int32)
@@ -63,6 +77,45 @@ class BasicRNNDecoder(EmbeddingDecoder):
             embedding=self.embedding,
             start_tokens=start_tokens,
             end_token=end_token)
+        decoder = tf.contrib.seq2seq.BasicDecoder(
+            cell=cell,
+            helper=helper,
+            initial_state=initial_state,
+            output_layer=output_layer)
+        return decoder
+
+    def _build_beam_decoder(self, cell, initial_state, params):
+        sos_id = tf.constant(value=params['sos_id'], dtype=tf.int32)
+        start_tokens = tf.fill([params['infer_batch_size']], sos_id)
+        end_token = tf.constant(value=params['eos_id'], dtype=tf.int32)
+
+        output_layer = tf.layers.Dense(units=params['target_vocab_size'], use_bias=False)
+
+        decoder = tf.contrib.seq2seq.BeamSearchDecoder(
+            cell=cell,
+            embedding=self.embedding,
+            start_tokens=start_tokens,
+            end_token=end_token,
+            initial_state=initial_state,
+            beam_width=params['beam_width'],
+            output_layer=output_layer,
+            length_penalty_weight=params['length_penalty_weight'])
+        return decoder
+
+    def _build_sampling_decoder(self, cell, initial_state, params):
+        sos_id = tf.constant(value=params['sos_id'], dtype=tf.int32)
+        start_tokens = tf.fill([params['infer_batch_size']], sos_id)
+        end_token = tf.constant(value=params['eos_id'], dtype=tf.int32)
+
+        output_layer = tf.layers.Dense(units=params['target_vocab_size'], use_bias=False)
+
+        helper = tf.contrib.seq2seq.SampleEmbeddingHelper(
+            embedding=self.embedding,
+            start_tokens=start_tokens,
+            end_token=end_token,
+            softmax_temperature=params['sampling_temperature'],
+            seed=params.get('random_seed', None))
+
         decoder = tf.contrib.seq2seq.BasicDecoder(
             cell=cell,
             helper=helper,
