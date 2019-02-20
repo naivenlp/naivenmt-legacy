@@ -81,3 +81,16 @@ def build_decoder_rnn_cells(states,
     cell = tf.nn.rnn_cell.MultiRNNCell(cells)
     initial_state = tf.contrib.seq2seq.tile_batch(states, multiplier=beam_width) if beam_width > 0 else states
     return cell, initial_state
+
+
+def build_rnn_attention_cells(outputs,
+                              states,
+                              num_layers,
+                              num_residual_layers,
+                              num_units,
+                              beam_width,
+                              unit_type,
+                              forget_bias=1.0,
+                              dropout=0.5,
+                              residual_fn=None):
+    pass
