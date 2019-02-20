@@ -5,7 +5,7 @@ import abc
 
 class Decoder(abc.ABC):
 
-    def decode(self, outputs, states, labels, model, params):
+    def decode(self, *inputs, **kwargs):
         raise NotImplementedError()
 
     def default_config(self):
@@ -19,7 +19,7 @@ class EmbeddingDecoder(Decoder):
         self.scope = scope
         self.dtype = dtype
 
-    def decode(self, outputs, states, labels, model, params):
+    def decode(self, outputs, states, labels, src_sequence_len, model, params):
         raise NotImplementedError()
 
     def default_config(self):

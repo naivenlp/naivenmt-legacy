@@ -1,11 +1,12 @@
-from nmt.decoders.abstract_decoder import EmbeddingDecoder
 import tensorflow as tf
+
 from nmt import rnn_utils
+from nmt.decoders.abstract_decoder import EmbeddingDecoder
 
 
 class BasicRNNDecoder(EmbeddingDecoder):
 
-    def decode(self, outputs, states, labels, mode, params):
+    def decode(self, outputs, states, labels, src_sequence_len, mode, params):
         default_params = self.default_config()
         if params:
             default_params.update(**params)
@@ -32,17 +33,26 @@ class BasicRNNDecoder(EmbeddingDecoder):
                     cell=cell,
                     helper=helper,
                     initial_state=initial_state)
-                outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
+                decoder_outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
                     decoder,
                     output_time_major=False,
                     swap_memory=params['swap_memory'])
-                sample_id = outputs.sample_id
-                logits = tf.layers.dense(inputs=outputs.rnn_output, units=params['target_vocab_size'], use_bias=False)
+                sample_id = decoder_outputs.sample_id
+                logits = tf.layers.dense(inputs=decoder_outputs.rnn_output, units=params['target_vocab_size'],
+                                         use_bias=False)
                 return logits, sample_id, final_context_state
 
-            return self._decode(cell, initial_state, params)
+            decoder = self._build_decoder(cell, initial_state, params)
+            decoder_outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
+                decoder=decoder,
+                maximum_iterations=self._max_infer_iterations(src_sequence_len, params),
+                output_time_major=False,
+                swap_memory=params['swap_memory'])
+            logits = outputs.rnn_output
+            sample_id = outputs.sample_id
+            return logits, sample_id, final_context_state
 
-    def _decode(self, cell, initial_state, params):
+    def _build_decoder(self, cell, initial_state, params):
         sos_id = tf.constant(value=params['sos_id'], dtype=tf.int32)
         start_tokens = tf.fill([params['infer_batch_size']], sos_id)
         end_token = tf.constant(value=params['eos_id'], dtype=tf.int32)
@@ -58,14 +68,18 @@ class BasicRNNDecoder(EmbeddingDecoder):
             helper=helper,
             initial_state=initial_state,
             output_layer=output_layer)
-        outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
-            decoder=decoder,
-            maximum_iterations=params['max_iteration'],
-            output_time_major=False,
-            swap_memory=params['swap_memory'])
-        logits = outputs.rnn_output
-        sample_id = outputs.sample_id
-        return logits, sample_id, final_context_state
+        return decoder
+
+    @staticmethod
+    def _max_infer_iterations(sequence_length, params):
+        if params.get('tgt_max_len_infer', None):
+            max_iterations = params['tgt_max_len_infer']
+        else:
+            decoding_length_factor = 2.0
+            max_encoder_length = tf.reduce_max(sequence_length)
+            max_iterations = tf.to_int32(tf.round(
+                tf.to_float(max_encoder_length) * decoding_length_factor))
+        return max_iterations
 
     def default_config(self):
         config = {
