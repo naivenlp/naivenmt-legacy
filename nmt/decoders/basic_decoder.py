@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-from nmt import rnn_utils
 from nmt.decoders.abstract_decoder import EmbeddingDecoder
 
 
@@ -16,7 +15,7 @@ class BasicRNNDecoder(EmbeddingDecoder):
             outputs = tf.transpose(outputs, perm=[1, 0, 2])
 
         with tf.variable_scope(self.scope, dtype=self.dtype, reuse=tf.AUTO_REUSE) as scope:
-            cell, initial_state = self._build_cell_and_initial_state(outputs, states, params)
+            cell, initial_state = self._build_cell_and_initial_state(mode, outputs, states, src_sequence_len, params)
 
             if mode != tf.estimator.ModeKeys.PREDICT:
                 helper = tf.contrib.seq2seq.TrainingHelper(
@@ -46,17 +45,54 @@ class BasicRNNDecoder(EmbeddingDecoder):
             sample_id = outputs.sample_id
             return logits, sample_id, final_context_state
 
-    def _build_cell_and_initial_state(self, encoder_output, encoder_state, params):
-        cell, initial_state = rnn_utils.build_decoder_rnn_cells(
-            states=encoder_state,
+    def _build_cell(self,
+                    num_layers,
+                    num_residual_layers,
+                    num_units,
+                    unit_type,
+                    dropout,
+                    forget_bias,
+                    residual_fn):
+        cells = []
+        for i in range(num_layers):
+            residual = (i >= num_layers - num_residual_layers)
+            if unit_type == "lstm":
+                cell = tf.nn.rnn_cell.LSTMCell(num_units=num_units, forget_bias=forget_bias)
+            elif unit_type == "layer_norm_lstm":
+                cell = tf.contrib.rnn.LayerNormBasicLSTMCell(num_units, forget_bias, layer_norm=True)
+            elif unit_type == "gru":
+                cell = tf.nn.rnn_cell.GRUCell(num_units=num_units)
+            elif unit_type == "nas":
+                cell = tf.contrib.rnn.NASCell(num_units=num_units)
+            else:
+                raise ValueError("Invalid unit_type: %s" % unit_type)
+
+            if dropout > 0.0:
+                cell = tf.nn.rnn_cell.DropoutWrapper(cell, 1.0 - dropout)
+            if residual and residual_fn:
+                cell = tf.nn.rnn_cell.ResidualWrapper(cell, residual_fn)
+
+            cells.append(cell)
+        cell = tf.nn.rnn_cell.MultiRNNCell(cells)
+        return cell
+
+    def _build_initial_state(self, mode, encoder_output, encoder_state, sequence_length, params):
+        if mode == tf.estimator.ModeKeys.PREDICT and params['beam_width'] > 0:
+            initial_state = tf.contrib.seq2seq.tile_batch(encoder_state, multiplier=params['beam_width'])
+        else:
+            initial_state = encoder_state
+        return initial_state
+
+    def _build_cell_and_initial_state(self, mode, encoder_output, encoder_state, sequence_length, params):
+        cell = self._build_cell(
             num_layers=params['num_decoder_layers'],
             num_residual_layers=params['num_decoder_residual_layers'],
             num_units=params['num_units'],
             unit_type=params['unit_type'],
-            beam_width=params['beam_width'],
-            dropout=params['dropout'],
+            dropout=params['dropout'] if mode == tf.estimator.ModeKeys.TRAIN else 0.0,
             forget_bias=params['forget_bias'],
             residual_fn=None)
+        initial_state = self._build_initial_state(mode, encoder_output, encoder_state, sequence_length, params)
         return cell, initial_state
 
     def _build_decoder(self, cell, initial_state, params):
