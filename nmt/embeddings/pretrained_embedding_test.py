@@ -17,7 +17,8 @@ class PretrainedEmbeddingTest(tf.test.TestCase):
         embedder = PretrainedEmbedding(vocab_file, pretrained_file)
 
         inputs = np.array([
-            ['I', 'am', 'a', 'test']
+            ['I', 'am', 'a', 'test'],
+            ['The', 'science', 'some_word', 'unk']
         ])
         inputs = tf.constant(inputs, dtype=tf.string)
         length = np.array([4])

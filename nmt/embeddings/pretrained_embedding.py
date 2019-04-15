@@ -1,15 +1,17 @@
-from nmt.embeddings.base_embedding import BaseEmbedding
-import tensorflow as tf
-import numpy as np
 import codecs
 
+import numpy as np
+import tensorflow as tf
+from tensorflow.python.ops import lookup_ops
 
-class PretrainedEmbedding(BaseEmbedding):
+from nmt.embeddings.embedding import Embedding
+
+
+class PretrainedEmbedding(Embedding):
 
     def __init__(self,
                  vocab_file,
                  pretrained_file,
-                 num_special_tokens=3,
                  name="pretrained_embedding",
                  dtype=tf.float32,
                  scope="embedding"):
@@ -18,51 +20,99 @@ class PretrainedEmbedding(BaseEmbedding):
         Args:
             vocab_file: A python string, vocab file's path
             pretrained_file: A python string, pretrained embedding file
-            num_special_tokens: A python integer, number of special tokens. Default is 3: ['<unk>', '<s>', '</s>']
             name: A python string, embedding variable's name
             dtype: Data type
             scope: A python string, variable scope
         """
-        super(PretrainedEmbedding, self).__init__(vocab_file, name, dtype, scope)
-
+        self.name = name
+        self.dtype = dtype
+        self.scope = scope
+        self.vocab_file = vocab_file
         self.pretrained_file = pretrained_file
-        self.num_special_tokens = num_special_tokens
+        self.str2id = None
+        self.id2str = None
 
-    def _embedding(self, inputs, length, params):
-        vocab = self._load_vocab()
-        # special tokens should put in the head of vocab
-        special_tokens = vocab[:self.num_special_tokens]
+    def embedding(self, inputs, length, params=None):
+        default_config = self.default_config()
+        if params:
+            default_config.update(**params)
+        params = default_config
+
+        # load vocab
+        vocab, vocab_size = self._load_vocab()
+        params.update({'vocab_size': vocab_size})
+
+        # load pretrained embedding
         embedding_dict, embedding_size = self._load_pretrained_embedding()
-        for token in special_tokens:
-            if token not in embedding_dict:
-                embedding_dict[token] = [0.0] * embedding_size
+        trainable_tokens = []
+        for v in vocab:
+            if v not in embedding_dict:
+                trainable_tokens.append(v)
+        num_trainable_tokens = len(trainable_tokens)
 
-        embedding_matrix = np.array([embedding_dict[t] for t in vocab], dtype=self.dtype.as_numpy_dtype)
-        embedding_matrix = tf.constant(embedding_matrix)
+        for token in trainable_tokens:
+            embedding_dict[token] = [0.0] * embedding_size
 
-        # pretrained embedding
-        embedding_const = tf.slice(input_=embedding_matrix, begin=[self.num_special_tokens, 0], size=[-1, -1])
+        # update vocab, move trainable tokens to the front of the vocab
+        self._update_vocab(trainable_tokens)
+        vocab, vocab_size = self._load_vocab()
+        embedding_matrix = np.array([embedding_dict[v] for v in vocab], dtype=self.dtype.as_numpy_dtype)
+        embedding_matrix = tf.convert_to_tensor(embedding_matrix)
+        # vocabs in pretrained file is pretrained vectors, so it is constant
+        const_matrix = tf.slice(input_=embedding_matrix, begin=[num_trainable_tokens, 0], size=[-1, -1])
 
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE) as scope:
-            # special tokens' embedding is trainable
-            embedding_variable = tf.get_variable(
-                name="embedding_variable",
-                shape=[self.num_special_tokens, embedding_size],
+            # vocabs not is pretrained file is trainable variables
+            variable_matrix = tf.get_variable(
+                name=self.name,
+                shape=[num_trainable_tokens, embedding_size],
                 dtype=self.dtype)
 
-            embedding = tf.concat([embedding_variable, embedding_const], axis=0)
+        # concat trainable embeddings and constant embeddings
+        embeddings = tf.concat([variable_matrix, const_matrix], axis=0)
+        self.str2id = lookup_ops.index_table_from_file(self.vocab_file, default_value=params['unk_id'])
+        self.id2str = lookup_ops.index_to_string_table_from_file(self.vocab_file, default_value=params['unk'])
 
-            inputs_ids = self.str2id.lookup(inputs)
-            embedded_inputs = tf.nn.embedding_lookup(embedding, inputs_ids)
-
+        input_ids = self.str2id.lookup(inputs)
+        embedded_inputs = tf.nn.embedding_lookup(embeddings, input_ids)
         return embedded_inputs
+
+    def default_config(self):
+        params = {
+            "unk": "<unk>",
+            "unk_id": 0,
+            "vocab_size": 10000,
+            "embedding_size": 256,
+            "num_partitions": 0
+        }
+        return params
+
+    def _update_vocab(self, trainable_tokens):
+        """Update vocab file. Move trainable tokens to the front of the vocab.
+
+        Args:
+            trainable_tokens: A list of str, vocabs that not in pretrained file.
+        """
+        tokens = []
+        with open(self.vocab_file, mode='rt', encoding='utf8', buffering=8192) as fin:
+            for v in fin:
+                v = v.strip('\n')
+                if v not in set(trainable_tokens):
+                    tokens.append(v)
+        processed_vocab = self.vocab_file + '.processed'
+        with open(processed_vocab, mode='wt', encoding='utf8', buffering=8192) as fout:
+            for t in trainable_tokens:
+                fout.write(t + '\n')
+            for t in tokens:
+                fout.write(t + '\n')
+        self.vocab_file = processed_vocab
 
     def _load_vocab(self):
         vocabs = []
         with codecs.getreader("utf8")(tf.gfile.GFile(self.vocab_file, "rb")) as f:
             for v in f:
                 vocabs.append(v.strip('\n'))
-        return vocabs
+        return vocabs, len(vocabs)
 
     def _load_pretrained_embedding(self):
         embedding_dict = dict()
